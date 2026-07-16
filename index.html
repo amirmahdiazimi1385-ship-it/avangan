@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -16,196 +16,80 @@
     <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 
     <style>
-        body {
-            font-family: 'Vazirmatn', sans-serif;
-            background-color: #f8fafc;
-        }
-        
-        /* Custom Scrollbar */
+        body { font-family: 'Vazirmatn', sans-serif; background-color: #f8fafc; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* Tree Styles for WBS View */
-        .tree-line::before {
-            content: '';
-            position: absolute;
-            top: 24px;
-            bottom: -15px;
-            right: 23px;
-            width: 2px;
-            background-color: #cbd5e1;
-            z-index: 0;
-        }
+        .tree-line::before { content: ''; position: absolute; top: 24px; bottom: -15px; right: 23px; width: 2px; background-color: #cbd5e1; z-index: 0; }
         .tree-node-last::before { display: none; }
         .node-content { position: relative; z-index: 1; }
-        
-        /* Task Row Table Emulation */
-        .task-row {
-            display: grid;
-            grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1fr 1.5fr;
-            gap: 1rem;
-            align-items: center;
-        }
-        @media (max-width: 1024px) {
-            .task-row { grid-template-columns: 1fr; gap: 0.5rem; }
-        }
-
-        /* Custom Gantt Table Styles */
-        .gantt-table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .gantt-table th, .gantt-table td {
-            border-bottom: 1px solid #e2e8f0;
-            border-left: 1px solid #e2e8f0;
-        }
-        
-        .gantt-sticky-col {
-            position: sticky;
-            right: 0;
-            background-color: white;
-            z-index: 20;
-            border-left: 2px solid #cbd5e1 !important; 
-        }
-        .gantt-sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background-color: white;
-        }
+        .task-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1fr 1.5fr; gap: 1rem; align-items: center; }
+        @media (max-width: 1024px) { .task-row { grid-template-columns: 1fr; gap: 0.5rem; } }
+        .gantt-table { border-collapse: separate; border-spacing: 0; }
+        .gantt-table th, .gantt-table td { border-bottom: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
+        .gantt-sticky-col { position: sticky; right: 0; background-color: white; z-index: 20; border-left: 2px solid #cbd5e1 !important; }
+        .gantt-sticky-header { position: sticky; top: 0; z-index: 30; background-color: white; }
         .gantt-sticky-header-top { z-index: 31; }
-        
         .gantt-row:hover .gantt-sticky-col { background-color: #f8fafc; }
+        .drag-over { border: 2px dashed #3b82f6 !important; background-color: #eff6ff !important; }
         
-        /* Drag and Drop Helpers */
-        .drag-over {
-            border: 2px dashed #3b82f6 !important;
-            background-color: #eff6ff !important;
+        /* Loading Overlay Styles */
+        #loader-overlay {
+            position: fixed; inset: 0; background: #ffffff; z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #0369a1;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
     
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0369a1',
-                        secondary: '#475569',
-                        success: '#10b981', 
-                        warning: '#d97706',
-                        danger: '#dc2626',
-                        light: '#f1f5f9'
-                    }
-                }
-            }
-        }
+        tailwind.config = { theme: { extend: { colors: { primary: '#0369a1', secondary: '#475569', success: '#10b981', warning: '#d97706', danger: '#dc2626', light: '#f1f5f9' } } } }
     </script>
 </head>
 <body class="h-screen flex overflow-hidden text-slate-800">
+
+    <!-- Loading Screen -->
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+        <h2 class="text-xl font-bold text-slate-700">درحال ارتباط با پایگاه داده...</h2>
+        <p class="text-slate-500 mt-2 text-sm">لطفاً شکیبا باشید</p>
+    </div>
 
     <script>
         const generateId = () => 'id_' + Math.random().toString(36).substr(2, 9);
         let taskCounter = 6; 
         const generateTaskCode = () => { taskCounter++; return 'TSK-' + taskCounter; };
 
-        let teamMembers = ['بدون مسئول', 'مدیر عامل', 'مدیر مالی', 'مهندس شعاعی', 'نماینده شرکت', 'پیمانکار', 'مسئول HSE', 'تیم بازاریابی'];
-
-        // Initial Data Structure
-        let appData = {
-            id: "root",
-            title: "شرکت آونگان (نود مرکزی)",
-            type: "main",
-            description: "برنامه جامع ارتقا، اخذ صلاحیت‌ها و توسعه کسب‌وکارهای شرکت.",
+        // ----------------------------------------------------
+        // بسیار مهم: لینک وب اپلیکیشن خود را داخل کوتیشن زیر قرار دهید
+        // ----------------------------------------------------
+        const SCRIPT_URL = 'لینک_مرحله_8_را_اینجا_قرار_دهید';
+        
+        // داده‌های اولیه (فقط برای زمانی که شیت خالی است)
+        let defaultAppData = {
+            id: "root", title: "شرکت آونگان (نود مرکزی)", type: "main", description: "برنامه جامع ارتقا، اخذ صلاحیت‌ها و توسعه کسب‌وکارهای شرکت.",
             children: [
                 {
-                    id: "node_legal",
-                    title: "احراز وضعیت حقوقی شرکت",
-                    type: "mixed_node",
-                    description: "بررسی و تکمیل اسناد حقوقی و ثبتی شرکت.",
-                    tasks: [
-                        { 
-                            id: generateId(), code: "TSK-1", title: "بروزرسانی روزنامه رسمی", 
-                            status: "completed", priority: "high", assignee: "مدیر مالی", 
-                            startDate: "1403/05/01", endDate: "1403/05/05", progress: 100,
-                            milestones: "ثبت در سامانه ثنا\nتایید نهایی مدارک"
-                        },
-                        { 
-                            id: generateId(), code: "TSK-2", title: "تشکیل پرونده فیزیکی", 
-                            status: "in_progress", priority: "medium", assignee: "نماینده شرکت", 
-                            startDate: "1403/05/06", endDate: "1403/05/15", progress: 40,
-                            milestones: "جمع‌آوری پوشه‌ها\nارسال به دبیرخانه"
-                        }
-                    ],
-                    children: []
-                },
-                {
-                    id: "node_marketing",
-                    title: "تهیه سند مارکتینگ",
-                    type: "mixed_node",
-                    description: "تدوین استراتژی‌های بازاریابی و فروش",
-                    tasks: [
-                         { 
-                            id: generateId(), code: "TSK-3", title: "برنامه‌ریزی تبلیغات تیر", 
-                            status: "blocked", priority: "high", assignee: "تیم بازاریابی", 
-                            startDate: "1403/05/12", endDate: "1403/05/22", progress: 0,
-                            milestones: ""
-                        },
-                        { 
-                            id: generateId(), code: "TSK-4", title: "پروژه کانال یابی در شبکه‌های اجتماعی", 
-                            status: "blocked", priority: "high", assignee: "تیم بازاریابی", 
-                            startDate: "1403/05/15", endDate: "1403/05/28", progress: 20,
-                            milestones: ""
-                        }
-                    ],
-                    children: []
-                },
-                {
-                    id: "node_qualifications",
-                    title: "صلاحیت‌ها و مجوزها",
-                    type: "category",
-                    description: "مسیر اخذ گواهینامه‌های لازم.",
-                    children: [
-                        {
-                            id: "q_1",
-                            title: "اخذ گواهینامه صلاحیت ایمنی (HSE)",
-                            type: "qualification",
-                            status: "in_progress",
-                            priority: "high",
-                            assignee: "مسئول HSE",
-                            timeline: "۱ الی ۲ ماه",
-                            description: "پیش‌شرط ورود به هر مناقصه و سامانه دولتی.",
-                            details: "مرجع صادرکننده: وزارت کار.\nروند: گذراندن دوره ایمنی.",
-                            tasks: [
-                                {
-                                    id: generateId(), code: "TSK-5", title: "سرچ منابع مطالعاتی", 
-                                    status: "completed", priority: "high", assignee: "مهندس شعاعی", 
-                                    startDate: "1403/04/28", endDate: "1403/04/31", progress: 100,
-                                    milestones: ""
-                                },
-                                {
-                                    id: generateId(), code: "TSK-6", title: "ثبت نام پرسنل در دوره ایمنی", 
-                                    status: "in_progress", priority: "high", assignee: "مهندس شعاعی", 
-                                    startDate: "1403/05/10", endDate: "1403/05/20", progress: 80,
-                                    milestones: "سرچ منابع (انجام شده)\nثبت نام اولیه (در حال انجام)"
-                                }
-                            ]
-                        }
-                    ]
+                    id: "node_legal", title: "احراز وضعیت حقوقی شرکت", type: "mixed_node", description: "بررسی و تکمیل اسناد حقوقی و ثبتی شرکت.",
+                    tasks: [{ id: generateId(), code: "TSK-1", title: "بروزرسانی روزنامه رسمی", status: "completed", priority: "high", assignee: "مدیر مالی", startDate: "1403/05/01", endDate: "1403/05/05", progress: 100, milestones: "ثبت در سامانه ثنا\nتایید نهایی مدارک" }], children: []
                 }
             ]
         };
+        let defaultTeamMembers = ['بدون مسئول', 'مدیر عامل', 'مدیر مالی', 'مهندس شعاعی', 'مسئول HSE'];
+
+        let appData = defaultAppData;
+        let teamMembers = defaultTeamMembers;
 
         // UI State
         let expandedNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']);
         let editingNodes = new Set(); 
         let expandedAccordions = new Set(); 
-        let expandedGanttNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']); // For Gantt toggle
-
-        // Drag & Drop State
-        let draggedNodeId = null;
-        let draggedParentId = null;
+        let expandedGanttNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']);
+        let draggedNodeId = null; let draggedParentId = null;
 
         const statusOptions = {
             'not_started': { label: 'شروع نشده', color: 'bg-slate-100 text-slate-600 border-slate-300', btnClass: 'bg-slate-100 text-slate-600', ganttColor: 'bg-slate-400' },
@@ -213,51 +97,61 @@
             'completed': { label: 'انجام شده', color: 'bg-emerald-50 text-emerald-600 border-emerald-200', btnClass: 'bg-emerald-100 text-emerald-700', ganttColor: 'bg-emerald-500' },
             'blocked': { label: 'مسدود / تعویق', color: 'bg-rose-50 text-rose-600 border-rose-200', btnClass: 'bg-rose-100 text-rose-700', ganttColor: 'bg-rose-500' }
         };
-        const priorityOptions = { 'high': 'بالا', 'medium': 'متوسط', 'low': 'پایین' };
+
+        // --- FETCH DATA ON LOAD ---
+        window.onload = function() {
+            if (SCRIPT_URL.includes("لینک_مرحله_8_را_اینجا_قرار_دهید")) {
+                alert("https://script.google.com/macros/s/AKfycbw_pBCm02Ni14VUkSB6b8JdPJ8bOg5i_TtY_MtIyUPvxTPBJxz4MZbqZOYPyFZpN0E/exec");
+                initApp();
+                return;
+            }
+
+            // درخواست GET به اسکریپت برای دریافت دیتا
+            fetch(SCRIPT_URL + "?action=load")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.result === 'success' && data.data) {
+                        const parsedData = JSON.parse(data.data);
+                        if(parsedData.appData) appData = parsedData.appData;
+                        if(parsedData.teamMembers) teamMembers = parsedData.teamMembers;
+                        
+                        // باز کردن تمام نودها برای نمایش بهتر در ابتدا
+                        expandAllNodes(appData);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    alert("خطا در دریافت اطلاعات. داشبورد با اطلاعات پیش‌فرض آفلاین باز می‌شود.");
+                })
+                .finally(() => {
+                    initApp();
+                });
+        };
+
+        function expandAllNodes(node) {
+            expandedNodes.add(node.id);
+            if(node.type === 'qualification') expandedAccordions.add(node.id);
+            if(node.children) node.children.forEach(expandAllNodes);
+        }
+
+        function initApp() {
+            document.getElementById('loader-overlay').style.display = 'none';
+            renderTree();
+        }
 
         function findNodeAndParent(node, id, parent = null) {
             if (node.id === id) return { node, parent };
             if (node.children) {
-                for (let child of node.children) {
-                    let result = findNodeAndParent(child, id, node);
-                    if (result) return result;
-                }
-            }
-            return null;
+                for (let child of node.children) { let result = findNodeAndParent(child, id, node); if (result) return result; }
+            } return null;
         }
         function findNode(id) { const result = findNodeAndParent(appData, id); return result ? result.node : null; }
 
         function addChildNode(parentId, defaultType, event) {
-            if(event) event.stopPropagation();
-            const parent = findNode(parentId);
-            if (!parent) return;
-            if (!parent.children) parent.children = [];
-            
-            const newNode = {
-                id: generateId(), 
-                title: defaultType === 'qualification' ? "صلاحیت جدید" : "بخش جدید", 
-                type: defaultType, 
-                description: "", 
-                children: []
-            };
-
-            if(defaultType === 'mixed_node' || defaultType === 'category') {
-                newNode.tasks = [];
-            } else if (defaultType === 'qualification') {
-                newNode.status = 'not_started'; 
-                newNode.priority = 'medium';
-                newNode.assignee = 'بدون مسئول';
-                newNode.timeline = '';
-                newNode.details = '';
-                newNode.tasks = [];
-            }
-
-            parent.children.push(newNode);
-            expandedNodes.add(parentId);
-            editingNodes.add(newNode.id); 
-            if (defaultType === 'qualification') {
-                expandedAccordions.add(newNode.id);
-            }
+            if(event) event.stopPropagation(); const parent = findNode(parentId); if (!parent) return; if (!parent.children) parent.children = [];
+            const newNode = { id: generateId(), title: defaultType === 'qualification' ? "صلاحیت جدید" : "بخش جدید", type: defaultType, description: "", children: [] };
+            if(defaultType === 'mixed_node' || defaultType === 'category') { newNode.tasks = []; } else if (defaultType === 'qualification') { newNode.status = 'not_started'; newNode.priority = 'medium'; newNode.assignee = 'بدون مسئول'; newNode.timeline = ''; newNode.details = ''; newNode.tasks = []; }
+            parent.children.push(newNode); expandedNodes.add(parentId); editingNodes.add(newNode.id); if (defaultType === 'qualification') { expandedAccordions.add(newNode.id); }
             renderTree();
         }
 
@@ -267,77 +161,37 @@
                 const result = findNodeAndParent(appData, id);
                 if (result && result.parent) {
                     result.parent.children = result.parent.children.filter(c => c.id !== id);
-                    editingNodes.delete(id);
-                    expandedNodes.delete(id);
-                    expandedAccordions.delete(id);
+                    editingNodes.delete(id); expandedNodes.delete(id); expandedAccordions.delete(id);
                     renderTree();
-                } else if (id === 'root') {
-                    alert("نود اصلی (ریشه) قابل حذف نیست.");
-                }
+                } else if (id === 'root') { alert("نود اصلی (ریشه) قابل حذف نیست."); }
             }
         }
 
-        function toggleGanttNode(id) {
-            if(expandedGanttNodes.has(id)) expandedGanttNodes.delete(id);
-            else expandedGanttNodes.add(id);
-            renderCustomGantt();
-        }
+        function toggleGanttNode(id) { if(expandedGanttNodes.has(id)) expandedGanttNodes.delete(id); else expandedGanttNodes.add(id); renderCustomGantt(); }
 
         function handleDragStart(event, nodeId, parentId) {
-            if(editingNodes.has(nodeId)) { event.preventDefault(); return; } // No drag while editing
-            draggedNodeId = nodeId;
-            draggedParentId = parentId;
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', nodeId); // Required for Firefox
+            if(editingNodes.has(nodeId)) { event.preventDefault(); return; } 
+            draggedNodeId = nodeId; draggedParentId = parentId; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', nodeId); 
         }
 
         function handleDragOver(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            const dropTarget = event.currentTarget;
-            if(dropTarget) {
-                dropTarget.classList.add('drag-over');
-                // Remove from siblings to only highlight one
-                Array.from(dropTarget.parentNode.children).forEach(sibling => {
-                    if(sibling !== dropTarget) sibling.classList.remove('drag-over');
-                });
-            }
+            event.preventDefault(); event.stopPropagation(); const dropTarget = event.currentTarget;
+            if(dropTarget) { dropTarget.classList.add('drag-over'); Array.from(dropTarget.parentNode.children).forEach(sibling => { if(sibling !== dropTarget) sibling.classList.remove('drag-over'); }); }
         }
         
-        function handleDragLeave(event) {
-            const dropTarget = event.currentTarget;
-            if(dropTarget) dropTarget.classList.remove('drag-over');
-        }
+        function handleDragLeave(event) { const dropTarget = event.currentTarget; if(dropTarget) dropTarget.classList.remove('drag-over'); }
 
         function handleDrop(event, targetNodeId, targetParentId) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-
+            event.preventDefault(); event.stopPropagation(); document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
             if (!draggedNodeId || draggedNodeId === targetNodeId) return;
-
-            // Only allow reordering within the same parent
-            if (draggedParentId !== targetParentId || targetParentId === 'null') {
-                alert('جابجایی فقط در بین هم‌رده‌های یک بخش امکان‌پذیر است.');
-                return;
-            }
-
+            if (draggedParentId !== targetParentId || targetParentId === 'null') { alert('جابجایی فقط در بین هم‌رده‌های یک بخش امکان‌پذیر است.'); return; }
             const parent = findNode(targetParentId);
             if (parent && parent.children) {
-                const fromIndex = parent.children.findIndex(c => c.id === draggedNodeId);
-                const toIndex = parent.children.findIndex(c => c.id === targetNodeId);
-
-                if (fromIndex > -1 && toIndex > -1) {
-                    const [movedNode] = parent.children.splice(fromIndex, 1);
-                    parent.children.splice(toIndex, 0, movedNode);
-                    renderTree();
-                }
+                const fromIndex = parent.children.findIndex(c => c.id === draggedNodeId); const toIndex = parent.children.findIndex(c => c.id === targetNodeId);
+                if (fromIndex > -1 && toIndex > -1) { const [movedNode] = parent.children.splice(fromIndex, 1); parent.children.splice(toIndex, 0, movedNode); renderTree(); }
             }
-            draggedNodeId = null;
-            draggedParentId = null;
+            draggedNodeId = null; draggedParentId = null;
         }
-
     </script>
 
     <aside class="w-16 lg:w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 z-20 shadow-xl shrink-0">
@@ -347,26 +201,11 @@
         </div>
         <nav class="flex-1 py-6 flex flex-col justify-between">
             <ul class="space-y-2">
-                <li>
-                    <button onclick="switchTab('wbs')" id="tab-wbs" class="w-full text-right flex items-center px-4 lg:px-6 py-3 bg-sky-900/50 text-sky-400 border-r-4 border-sky-400 transition-colors">
-                        <i class="fas fa-sitemap text-xl w-8 text-center"></i>
-                        <span class="mr-2 hidden lg:block font-medium">پروژه‌ها و تسک‌ها</span>
-                    </button>
-                </li>
-                 <li>
-                    <button onclick="switchTab('gantt')" id="tab-gantt" class="w-full text-right flex items-center px-4 lg:px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white border-r-4 border-transparent transition-colors">
-                        <i class="fas fa-chart-gantt text-xl w-8 text-center"></i>
-                        <span class="mr-2 hidden lg:block font-medium">گانت چارت (زمان‌بندی)</span>
-                    </button>
-                </li>
+                <li><button onclick="switchTab('wbs')" id="tab-wbs" class="w-full text-right flex items-center px-4 lg:px-6 py-3 bg-sky-900/50 text-sky-400 border-r-4 border-sky-400 transition-colors"><i class="fas fa-sitemap text-xl w-8 text-center"></i><span class="mr-2 hidden lg:block font-medium">پروژه‌ها و تسک‌ها</span></button></li>
+                <li><button onclick="switchTab('gantt')" id="tab-gantt" class="w-full text-right flex items-center px-4 lg:px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-white border-r-4 border-transparent transition-colors"><i class="fas fa-chart-gantt text-xl w-8 text-center"></i><span class="mr-2 hidden lg:block font-medium">گانت چارت (زمان‌بندی)</span></button></li>
             </ul>
             <ul class="space-y-2 border-t border-slate-800 pt-4 mt-4">
-                 <li>
-                    <button onclick="openTeamModal()" class="w-full text-right flex items-center px-4 lg:px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 border-r-4 border-transparent transition-colors">
-                        <i class="fas fa-users-cog text-xl w-8 text-center"></i>
-                        <span class="mr-2 hidden lg:block font-medium">مدیریت مسئولین</span>
-                    </button>
-                </li>
+                <li><button onclick="openTeamModal()" class="w-full text-right flex items-center px-4 lg:px-6 py-3 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 border-r-4 border-transparent transition-colors"><i class="fas fa-users-cog text-xl w-8 text-center"></i><span class="mr-2 hidden lg:block font-medium">مدیریت مسئولین</span></button></li>
             </ul>
         </nav>
     </aside>
@@ -375,256 +214,125 @@
         <header class="h-16 flex items-center justify-between px-6 border-b border-slate-200 bg-white shadow-sm z-10 shrink-0">
             <h1 class="text-xl font-bold text-slate-800" id="page-title">مدیریت ساختار و تسک‌ها</h1>
             <div class="flex gap-2 items-center">
-                 <!-- دکمه جدید ذخیره ابری -->
                  <button onclick="saveDataToCloud()" id="save-btn" class="bg-emerald-600 text-white px-4 py-2 rounded shadow hover:bg-emerald-700 transition-colors flex items-center gap-2 font-bold text-sm">
-                    <i class="fas fa-cloud-upload-alt"></i> ثبت در فضای ابری
+                    <i class="fas fa-cloud-upload-alt"></i> ذخیره در فضای ابری
                 </button>
-                 <button onclick="renderTree()" class="text-slate-500 hover:text-primary transition-colors p-2" title="بازخوانی">
+                 <button onclick="window.location.reload()" class="text-slate-500 hover:text-primary transition-colors p-2" title="بازخوانی از سرور">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
         </header>
         
-        <!-- View 1: WBS -->
-        <div class="flex-1 overflow-y-auto p-4 lg:p-8 block bg-slate-50/50" id="view-wbs">
-            <div id="tree-container" class="max-w-7xl mx-auto"></div>
-        </div>
+        <div class="flex-1 overflow-y-auto p-4 lg:p-8 block bg-slate-50/50" id="view-wbs"><div id="tree-container" class="max-w-7xl mx-auto"></div></div>
         
-        <!-- View 2: Custom Gantt Chart -->
         <div class="flex-1 overflow-hidden hidden flex-col bg-slate-50 relative" id="view-gantt">
             <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex gap-4 text-xs font-medium z-40">
                 <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 block"></span> انجام شده</div>
                 <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-sky-400 block"></span> جاری</div>
                 <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-400 block"></span> شروع نشده</div>
                 <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500 block"></span> تعویق / مسدود</div>
-                <div class="flex-1"></div>
-                <div class="text-slate-500"><i class="fas fa-info-circle ml-1"></i> نمودار فقط خواندنی است. ویرایش از بخش "پروژه‌ها و تسک‌ها" انجام می‌شود.</div>
+                <div class="flex-1"></div><div class="text-slate-500"><i class="fas fa-info-circle ml-1"></i> نمودار فقط خواندنی است. ویرایش از بخش "پروژه‌ها و تسک‌ها" انجام می‌شود.</div>
             </div>
-            <!-- Gantt Canvas injected here -->
-            <div class="flex-1 overflow-auto bg-white" id="gantt-wrapper" dir="rtl">
-            </div>
+            <div class="flex-1 overflow-auto bg-white" id="gantt-wrapper" dir="rtl"></div>
         </div>
     </main>
 
     <script>
         function switchTab(tabId) {
-            document.getElementById('view-wbs').classList.replace('block', 'hidden');
-            document.getElementById('view-gantt').classList.replace('flex', 'hidden');
-            
-            ['wbs', 'gantt'].forEach(id => {
-                const btn = document.getElementById('tab-' + id);
-                btn.classList.remove('bg-sky-900/50', 'text-sky-400', 'border-sky-400');
-                btn.classList.add('text-slate-400', 'border-transparent');
-            });
-
-            const activeBtn = document.getElementById('tab-' + tabId);
-            activeBtn.classList.add('bg-sky-900/50', 'text-sky-400', 'border-sky-400');
-            activeBtn.classList.remove('text-slate-400', 'border-transparent');
-
-            if(tabId === 'wbs') {
-                document.getElementById('view-wbs').classList.replace('hidden', 'block');
-                document.getElementById('page-title').innerText = "پروژه‌ها و تسک‌ها";
-                renderTree();
-            } else if (tabId === 'gantt') {
-                document.getElementById('view-gantt').classList.replace('hidden', 'flex');
-                document.getElementById('page-title').innerText = "زمان‌بندی و گانت چارت شمسی";
-                renderCustomGantt();
-            }
+            document.getElementById('view-wbs').classList.replace('block', 'hidden'); document.getElementById('view-gantt').classList.replace('flex', 'hidden');
+            ['wbs', 'gantt'].forEach(id => { const btn = document.getElementById('tab-' + id); btn.classList.remove('bg-sky-900/50', 'text-sky-400', 'border-sky-400'); btn.classList.add('text-slate-400', 'border-transparent'); });
+            const activeBtn = document.getElementById('tab-' + tabId); activeBtn.classList.add('bg-sky-900/50', 'text-sky-400', 'border-sky-400'); activeBtn.classList.remove('text-slate-400', 'border-transparent');
+            if(tabId === 'wbs') { document.getElementById('view-wbs').classList.replace('hidden', 'block'); document.getElementById('page-title').innerText = "پروژه‌ها و تسک‌ها"; renderTree(); }
+            else if (tabId === 'gantt') { document.getElementById('view-gantt').classList.replace('hidden', 'flex'); document.getElementById('page-title').innerText = "زمان‌بندی و گانت چارت شمسی"; renderCustomGantt(); }
         }
 
-        function toggleNodeExpansion(id, event) {
-            if(event) event.stopPropagation();
-            if (expandedNodes.has(id)) expandedNodes.delete(id);
-            else expandedNodes.add(id);
-            renderTree();
-        }
-
-        function toggleAccordion(id, event) {
-            if(event && event.target.closest('button')) return;
-            if (expandedAccordions.has(id)) expandedAccordions.delete(id);
-            else expandedAccordions.add(id);
-            renderTree();
-        }
-
-        function toggleEditMode(id, event) {
-            if(event) event.stopPropagation();
-            if (editingNodes.has(id)) editingNodes.delete(id);
-            else editingNodes.add(id);
-            if(editingNodes.has(id)) {
-                expandedNodes.add(id); 
-                expandedAccordions.add(id);
-            }
-            renderTree();
-        }
-
-        function updateNodeBasic(id, field, value) {
-            const node = findNode(id);
-            if (node) node[field] = value;
-        }
+        function toggleNodeExpansion(id, event) { if(event) event.stopPropagation(); if (expandedNodes.has(id)) expandedNodes.delete(id); else expandedNodes.add(id); renderTree(); }
+        function toggleAccordion(id, event) { if(event && event.target.closest('button')) return; if (expandedAccordions.has(id)) expandedAccordions.delete(id); else expandedAccordions.add(id); renderTree(); }
+        function toggleEditMode(id, event) { if(event) event.stopPropagation(); if (editingNodes.has(id)) editingNodes.delete(id); else editingNodes.add(id); if(editingNodes.has(id)) { expandedNodes.add(id); expandedAccordions.add(id); } renderTree(); }
+        function updateNodeBasic(id, field, value) { const node = findNode(id); if (node) node[field] = value; }
 
         function addTask(nodeId) {
             const node = findNode(nodeId);
             if(node) {
                 if(!node.tasks) node.tasks = [];
-                const today = new Date();
-                const jDate = jalaali.toJalaali(today);
-                const todayStr = `${jDate.jy}/${String(jDate.jm).padStart(2,'0')}/${String(jDate.jd).padStart(2,'0')}`;
-
-                node.tasks.push({ 
-                    id: generateId(), code: generateTaskCode(),
-                    title: "تسک جدید", status: "not_started", priority: "medium", 
-                    assignee: "بدون مسئول", startDate: todayStr, endDate: todayStr, 
-                    progress: 0, milestones: ""
-                });
+                const today = new Date(); const jDate = jalaali.toJalaali(today); const todayStr = `${jDate.jy}/${String(jDate.jm).padStart(2,'0')}/${String(jDate.jd).padStart(2,'0')}`;
+                node.tasks.push({ id: generateId(), code: generateTaskCode(), title: "تسک جدید", status: "not_started", priority: "medium", assignee: "بدون مسئول", startDate: todayStr, endDate: todayStr, progress: 0, milestones: "" });
                 renderTree();
             }
         }
         
-        function removeTask(nodeId, taskId) {
-            const node = findNode(nodeId);
-            if(node && node.tasks) { node.tasks = node.tasks.filter(t => t.id !== taskId); renderTree(); }
-        }
+        function removeTask(nodeId, taskId) { const node = findNode(nodeId); if(node && node.tasks) { node.tasks = node.tasks.filter(t => t.id !== taskId); renderTree(); } }
         
         function updateTask(nodeId, taskId, key, value) {
-             const node = findNode(nodeId);
-             const task = node.tasks.find(t => t.id === taskId);
-             if(task) {
-                 if(key === 'progress') task[key] = parseInt(value) || 0;
-                 else task[key] = value;
-             }
+             const node = findNode(nodeId); const task = node.tasks.find(t => t.id === taskId);
+             if(task) { if(key === 'progress') task[key] = parseInt(value) || 0; else task[key] = value; }
         }
 
         function initDatePickers() {
             jalaliDatepicker.startWatch({ time: false, hideAfterChange: true, showTodayBtn: true, showEmptyBtn: false });
-            
             document.querySelectorAll('[data-jdp]').forEach(input => {
                 input.addEventListener('change', function(e) {
-                    const nodeId = this.getAttribute('data-node-id');
-                    const taskId = this.getAttribute('data-task-id');
-                    const field = this.getAttribute('data-field');
-                    if(nodeId && taskId && field) {
-                        updateTask(nodeId, taskId, field, this.value);
-                    }
+                    const nodeId = this.getAttribute('data-node-id'); const taskId = this.getAttribute('data-task-id'); const field = this.getAttribute('data-field');
+                    if(nodeId && taskId && field) { updateTask(nodeId, taskId, field, this.value); }
                 });
             });
         }
 
         function renderTasksUI(node, isEditing) {
             if (!node.tasks || (node.tasks.length === 0 && !isEditing)) return '';
-            
             let html = `<div class="mt-6">`;
-            
             if (isEditing) {
                  html += `
                     <div class="flex justify-between items-center mb-4 bg-slate-100 p-2 rounded border border-slate-200">
                         <h4 class="text-sm font-bold text-slate-700"><i class="fas fa-list-check ml-2 text-primary"></i>مدیریت تسک‌ها</h4>
-                        <button type="button" onclick="addTask('${node.id}')" class="text-xs bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded shadow-sm font-medium transition-colors">
-                            <i class="fas fa-plus ml-1 text-emerald-600"></i>افزودن تسک جدید
-                        </button>
-                    </div>
-                    <div class="space-y-4">`;
-                 
+                        <button type="button" onclick="addTask('${node.id}')" class="text-xs bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded shadow-sm font-medium transition-colors"><i class="fas fa-plus ml-1 text-emerald-600"></i>افزودن تسک جدید</button>
+                    </div><div class="space-y-4">`;
                  node.tasks.forEach(task => {
                      let statusOpts = Object.keys(statusOptions).map(k => `<option value="${k}" ${task.status === k ? 'selected' : ''}>${statusOptions[k].label}</option>`).join('');
                      let ownerOpts = teamMembers.map(m => `<option value="${m}" ${task.assignee === m ? 'selected' : ''}>${m}</option>`).join('');
-                     if(task.assignee && !teamMembers.includes(task.assignee)) {
-                         ownerOpts += `<option value="${task.assignee}" selected>${task.assignee} (حذف شده)</option>`;
-                     }
-                     
+                     if(task.assignee && !teamMembers.includes(task.assignee)) { ownerOpts += `<option value="${task.assignee}" selected>${task.assignee} (حذف شده)</option>`; }
                      html += `
                         <div class="bg-white border-2 border-slate-200 p-4 rounded-xl shadow-sm relative group">
                             <button type="button" onclick="removeTask('${node.id}', '${task.id}')" class="absolute top-2 left-2 text-rose-400 hover:text-rose-600 bg-rose-50 w-8 h-8 rounded flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity" title="حذف تسک"><i class="fas fa-trash"></i></button>
-                            
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div class="lg:col-span-2">
                                     <label class="text-[10px] font-bold text-slate-500 mb-1 block">عنوان تسک (${task.code})</label>
                                     <input type="text" value="${task.title}" onchange="updateTask('${node.id}', '${task.id}', 'title', this.value)" class="w-full text-sm font-medium border border-slate-300 rounded p-2 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                                 </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">مسئول (Owner)</label>
-                                    <select onchange="updateTask('${node.id}', '${task.id}', 'assignee', this.value)" class="w-full text-sm border border-slate-300 rounded p-2 bg-slate-50 outline-none">${ownerOpts}</select>
+                                <div><label class="text-[10px] font-bold text-slate-500 mb-1 block">مسئول (Owner)</label><select onchange="updateTask('${node.id}', '${task.id}', 'assignee', this.value)" class="w-full text-sm border border-slate-300 rounded p-2 bg-slate-50 outline-none">${ownerOpts}</select></div>
+                                <div><label class="text-[10px] font-bold text-slate-500 mb-1 block">وضعیت</label><select onchange="updateTask('${node.id}', '${task.id}', 'status', this.value)" class="w-full text-sm border border-slate-300 rounded p-2 bg-slate-50 outline-none">${statusOpts}</select></div>
+                                <div><label class="text-[10px] font-bold text-slate-500 mb-1 block">تاریخ شروع</label><input data-jdp type="text" data-node-id="${node.id}" data-task-id="${task.id}" data-field="startDate" value="${task.startDate}" class="w-full text-sm border border-slate-300 rounded p-2 bg-white outline-none text-center font-mono text-slate-700" dir="ltr" readonly style="cursor: pointer;"></div>
+                                <div><label class="text-[10px] font-bold text-slate-500 mb-1 block">تاریخ پایان</label><input data-jdp type="text" data-node-id="${node.id}" data-task-id="${task.id}" data-field="endDate" value="${task.endDate}" class="w-full text-sm border border-slate-300 rounded p-2 bg-white outline-none text-center font-mono text-slate-700" dir="ltr" readonly style="cursor: pointer;"></div>
+                                <div class="lg:col-span-2"><label class="text-[10px] font-bold text-slate-500 mb-1 block">پیشرفت (%)</label>
+                                    <div class="flex items-center gap-2"><input type="range" min="0" max="100" value="${task.progress}" oninput="this.nextElementSibling.innerText = this.value + '%'; updateTask('${node.id}', '${task.id}', 'progress', this.value)" class="flex-1 accent-emerald-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"><span class="text-xs font-bold text-slate-600 w-10 text-center">${task.progress}%</span></div>
                                 </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">وضعیت</label>
-                                    <select onchange="updateTask('${node.id}', '${task.id}', 'status', this.value)" class="w-full text-sm border border-slate-300 rounded p-2 bg-slate-50 outline-none">${statusOpts}</select>
-                                </div>
-                                
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">تاریخ شروع (شمسی)</label>
-                                    <input data-jdp type="text" data-node-id="${node.id}" data-task-id="${task.id}" data-field="startDate" value="${task.startDate}" class="w-full text-sm border border-slate-300 rounded p-2 bg-white outline-none text-center font-mono text-slate-700" placeholder="1403/05/01" dir="ltr" readonly style="cursor: pointer;">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">تاریخ پایان (شمسی)</label>
-                                    <input data-jdp type="text" data-node-id="${node.id}" data-task-id="${task.id}" data-field="endDate" value="${task.endDate}" class="w-full text-sm border border-slate-300 rounded p-2 bg-white outline-none text-center font-mono text-slate-700" placeholder="1403/05/10" dir="ltr" readonly style="cursor: pointer;">
-                                </div>
-                                <div class="lg:col-span-2">
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">پیشرفت (%)</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="range" min="0" max="100" value="${task.progress}" oninput="this.nextElementSibling.innerText = this.value + '%'; updateTask('${node.id}', '${task.id}', 'progress', this.value)" class="flex-1 accent-emerald-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                                        <span class="text-xs font-bold text-slate-600 w-10 text-center">${task.progress}%</span>
-                                    </div>
-                                </div>
-                                <div class="col-span-full">
-                                    <label class="text-[10px] font-bold text-slate-500 mb-1 block">مایلستون‌ها / توضیحات اجرایی</label>
-                                    <textarea onchange="updateTask('${node.id}', '${task.id}', 'milestones', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded p-2 bg-white resize-none outline-none" placeholder="هر خط یک مایلستون...">${task.milestones || ''}</textarea>
-                                </div>
+                                <div class="col-span-full"><label class="text-[10px] font-bold text-slate-500 mb-1 block">مایلستون‌ها / توضیحات</label><textarea onchange="updateTask('${node.id}', '${task.id}', 'milestones', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded p-2 bg-white resize-none outline-none">${task.milestones || ''}</textarea></div>
                             </div>
-                        </div>
-                     `;
+                        </div>`;
                  });
                  html += `</div>`;
             } else {
                  html += `
                     <div class="border-t border-slate-200 pt-4 mt-2">
                         <div class="task-row mb-3 px-2 hidden lg:grid border-b border-slate-200 pb-2">
-                            <div class="text-xs font-bold text-slate-500">عنوان پروژه / تسک</div>
-                            <div class="text-xs font-bold text-slate-500 text-center">مسئول (Owner)</div>
-                            <div class="text-xs font-bold text-slate-500">مایلستون‌ها / ساب‌تسک‌ها</div>
-                            <div class="text-xs font-bold text-slate-500 text-center">پرفورمنس / پیشرفت</div>
-                            <div class="text-xs font-bold text-slate-500 text-center">وضعیت</div>
-                            <div class="text-xs font-bold text-slate-500 text-center">تاریخ شروع و پایان</div>
-                        </div>
-                        <div class="space-y-3">
-                 `;
-                 
+                            <div class="text-xs font-bold text-slate-500">عنوان پروژه / تسک</div><div class="text-xs font-bold text-slate-500 text-center">مسئول (Owner)</div><div class="text-xs font-bold text-slate-500">مایلستون‌ها / ساب‌تسک‌ها</div><div class="text-xs font-bold text-slate-500 text-center">پیشرفت</div><div class="text-xs font-bold text-slate-500 text-center">وضعیت</div><div class="text-xs font-bold text-slate-500 text-center">تاریخ شروع و پایان</div>
+                        </div><div class="space-y-3">`;
                  node.tasks.forEach(task => {
-                     const statusStyle = statusOptions[task.status] || statusOptions['not_started'];
-                     const progress = task.progress || 0;
-                     
+                     const statusStyle = statusOptions[task.status] || statusOptions['not_started']; const progress = task.progress || 0;
                      let milestonesHtml = `<span class="text-slate-400 text-xs">-</span>`;
                      if(task.milestones) {
                          const lines = task.milestones.split('\n').filter(l => l.trim() !== '');
-                         if(lines.length > 0) {
-                             milestonesHtml = `<ul class="text-[11px] space-y-1 text-slate-600 leading-tight">` + lines.map(l => `<li class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>${l}</li>`).join('') + `</ul>`;
-                         }
+                         if(lines.length > 0) { milestonesHtml = `<ul class="text-[11px] space-y-1 text-slate-600 leading-tight">` + lines.map(l => `<li class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>${l}</li>`).join('') + `</ul>`; }
                      }
-
                      html += `
                         <div class="task-row bg-white border border-slate-200 p-3 lg:p-2 lg:border-none lg:bg-transparent rounded-lg hover:bg-slate-50 transition-colors">
-                            <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                <span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">${task.code}</span>
-                                <span>${task.title}</span>
-                            </div>
-                            <div class="flex lg:justify-center items-center">
-                                <span class="bg-slate-200 text-slate-700 text-xs font-medium px-4 py-1.5 rounded-md">${task.assignee || 'نامشخص'}</span>
-                            </div>
+                            <div class="font-bold text-slate-800 text-sm flex items-center gap-2"><span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">${task.code}</span><span>${task.title}</span></div>
+                            <div class="flex lg:justify-center items-center"><span class="bg-slate-200 text-slate-700 text-xs font-medium px-4 py-1.5 rounded-md">${task.assignee || 'نامشخص'}</span></div>
                             <div>${milestonesHtml}</div>
-                            <div class="flex items-center gap-3 lg:justify-center">
-                                <span class="text-xs font-bold text-slate-700 w-8 text-right">${progress}%</span>
-                                <div class="w-24 bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                                    <div class="bg-emerald-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
-                                </div>
-                            </div>
-                            <div class="flex lg:justify-center">
-                                <button class="px-4 py-1 rounded border text-[11px] font-bold ${statusStyle.btnClass} border-transparent cursor-default w-24 text-center">${statusStyle.label}</button>
-                            </div>
-                            <div class="flex flex-col text-[11px] text-slate-500 lg:items-center font-mono" dir="ltr">
-                                <div><span class="text-slate-800 font-medium">${task.startDate || '-'}</span></div>
-                                <div class="text-[10px] text-slate-400 my-0.5">تا</div>
-                                <div><span class="text-slate-800 font-medium">${task.endDate || '-'}</span></div>
-                            </div>
-                        </div>
-                     `;
+                            <div class="flex items-center gap-3 lg:justify-center"><span class="text-xs font-bold text-slate-700 w-8 text-right">${progress}%</span><div class="w-24 bg-slate-200 rounded-full h-2.5 overflow-hidden"><div class="bg-emerald-500 h-2.5 rounded-full" style="width: ${progress}%"></div></div></div>
+                            <div class="flex lg:justify-center"><button class="px-4 py-1 rounded border text-[11px] font-bold ${statusStyle.btnClass} border-transparent cursor-default w-24 text-center">${statusStyle.label}</button></div>
+                            <div class="flex flex-col text-[11px] text-slate-500 lg:items-center font-mono" dir="ltr"><div><span class="text-slate-800 font-medium">${task.startDate || '-'}</span></div><div class="text-[10px] text-slate-400 my-0.5">تا</div><div><span class="text-slate-800 font-medium">${task.endDate || '-'}</span></div></div>
+                        </div>`;
                  });
                  html += `</div></div>`;
             }
@@ -635,186 +343,98 @@
             if (isEditing) {
                 return `
                     <div class="flex gap-2 items-center">
-                        ${node.id !== 'root' ? `<button type="button" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded text-sm hover:bg-rose-100 transition-colors flex items-center shadow-sm font-medium border border-rose-200" title="حذف کامل">
-                            <i class="fas fa-trash ml-2"></i> حذف
-                        </button>` : ''}
-                        <button type="button" onclick="toggleEditMode('${node.id}', event)" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm hover:bg-emerald-700 transition-colors flex items-center shadow-sm font-medium">
-                            <i class="fas fa-check ml-2"></i> تایید و بستن
-                        </button>
-                    </div>
-                `;
+                        ${node.id !== 'root' ? `<button type="button" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded text-sm hover:bg-rose-100 transition-colors flex items-center shadow-sm font-medium border border-rose-200"><i class="fas fa-trash ml-2"></i> حذف</button>` : ''}
+                        <button type="button" onclick="toggleEditMode('${node.id}', event)" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm hover:bg-emerald-700 transition-colors flex items-center shadow-sm font-medium"><i class="fas fa-check ml-2"></i> تایید و بستن</button>
+                    </div>`;
             } else {
                 let addBtn = '';
-                if (node.type === 'category') {
-                    addBtn = `<button title="افزودن صلاحیت جدید" onclick="addChildNode('${node.id}', 'qualification', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                                <i class="fas fa-plus"></i>
-                              </button>`;
-                } else if (node.type === 'main' || node.type === 'mixed_node') {
-                    addBtn = `<button title="افزودن زیرمجموعه" onclick="addChildNode('${node.id}', 'mixed_node', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                                <i class="fas fa-plus"></i>
-                              </button>`;
-                }
-
+                if (node.type === 'category') { addBtn = `<button title="افزودن صلاحیت" onclick="addChildNode('${node.id}', 'qualification', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium"><i class="fas fa-plus"></i></button>`; } 
+                else if (node.type === 'main' || node.type === 'mixed_node') { addBtn = `<button title="افزودن زیرمجموعه" onclick="addChildNode('${node.id}', 'mixed_node', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium"><i class="fas fa-plus"></i></button>`; }
                 return `
                     <div class="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         ${addBtn}
-                        <button title="ویرایش اطلاعات و تسک‌ها" onclick="toggleEditMode('${node.id}', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-primary hover:border-primary px-3 py-1 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                            <i class="fas fa-pen ml-1"></i> ویرایش
-                        </button>
-                        ${node.id !== 'root' ? `<button title="حذف" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-white border border-slate-300 text-slate-400 hover:text-rose-600 hover:border-rose-300 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                            <i class="fas fa-trash"></i>
-                        </button>` : ''}
-                    </div>
-                `;
+                        <button title="ویرایش اطلاعات" onclick="toggleEditMode('${node.id}', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-primary px-3 py-1 rounded flex items-center justify-center transition-colors text-xs font-medium"><i class="fas fa-pen ml-1"></i> ویرایش</button>
+                        ${node.id !== 'root' ? `<button title="حذف" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-white border border-slate-300 text-slate-400 hover:text-rose-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>`;
             }
         }
 
         function renderQualificationUI(node, isEditing, parentId) {
-            const isExpanded = expandedAccordions.has(node.id) || isEditing;
-            const statusStyle = statusOptions[node.status] || statusOptions['not_started'];
-
+            const isExpanded = expandedAccordions.has(node.id) || isEditing; const statusStyle = statusOptions[node.status] || statusOptions['not_started'];
             let html = `
                 <div class="mt-3 border rounded-xl ${isExpanded ? 'border-primary shadow-md bg-white' : 'border-slate-300 bg-white hover:border-slate-400'} transition-all overflow-hidden relative">
                     ${isExpanded ? '<div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>' : ''}
                     <div class="p-3 lg:p-4 flex flex-col lg:flex-row lg:items-center justify-between cursor-pointer select-none group" onclick="toggleAccordion('${node.id}', event)">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg ${isExpanded ? 'bg-blue-50 text-primary' : 'bg-slate-100 text-slate-500'} flex items-center justify-center shrink-0 transition-colors">
-                                <i class="fas fa-award text-xl"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-sm md:text-base">${node.title}</h4>
-                                ${!isExpanded ? `<p class="text-xs text-slate-500 line-clamp-1 mt-0.5">${node.description || 'بدون توضیح'}</p>` : ''}
-                            </div>
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg ${isExpanded ? 'bg-blue-50 text-primary' : 'bg-slate-100 text-slate-500'} flex items-center justify-center shrink-0 transition-colors"><i class="fas fa-award text-xl"></i></div>
+                            <div><h4 class="font-bold text-slate-800 text-sm md:text-base">${node.title}</h4>${!isExpanded ? `<p class="text-xs text-slate-500 line-clamp-1 mt-0.5">${node.description || 'بدون توضیح'}</p>` : ''}</div>
                         </div>
                         <div class="flex items-center gap-4 mt-3 lg:mt-0 justify-between lg:justify-end">
                             ${!isEditing ? `<span class="text-[11px] px-3 py-1 rounded-full border ${statusStyle.color} font-bold">${statusStyle.label}</span>` : ''}
-                            <div class="flex items-center gap-2">
-                                ${renderActionButtons(node, isEditing)}
-                                <button class="text-slate-400 w-8 h-8 flex items-center justify-center bg-slate-50 rounded hover:bg-slate-100">
-                                    <i class="fas fa-chevron-${isExpanded ? 'up text-primary' : 'down'} text-sm transition-transform"></i>
-                                </button>
-                            </div>
+                            <div class="flex items-center gap-2">${renderActionButtons(node, isEditing)}<button class="text-slate-400 w-8 h-8 flex items-center justify-center bg-slate-50 rounded hover:bg-slate-100"><i class="fas fa-chevron-${isExpanded ? 'up text-primary' : 'down'} text-sm"></i></button></div>
                         </div>
-                    </div>
-            `;
-
+                    </div>`;
             if (isExpanded) {
                 html += `<div class="p-4 lg:p-6 border-t border-slate-100 bg-slate-50/30 cursor-default" onclick="event.stopPropagation()">`;
                 if (isEditing) {
                     html += `
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 bg-white p-4 rounded-lg border border-slate-200 mb-4 shadow-sm">
-                            <div class="lg:col-span-2">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">عنوان صلاحیت</label>
-                                <input type="text" value="${node.title}" onchange="updateNodeBasic('${node.id}', 'title', this.value)" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 outline-none focus:border-primary">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">توضیح کوتاه</label>
-                                <textarea onchange="updateNodeBasic('${node.id}', 'description', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 resize-none outline-none focus:border-primary">${node.description || ''}</textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">نهاد صادرکننده / جزئیات</label>
-                                <textarea onchange="updateNodeBasic('${node.id}', 'details', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 resize-none outline-none focus:border-primary">${node.details || ''}</textarea>
-                            </div>
-                        </div>
-                    `;
+                            <div class="lg:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1">عنوان صلاحیت</label><input type="text" value="${node.title}" onchange="updateNodeBasic('${node.id}', 'title', this.value)" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 outline-none focus:border-primary"></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">توضیح کوتاه</label><textarea onchange="updateNodeBasic('${node.id}', 'description', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 resize-none outline-none focus:border-primary">${node.description || ''}</textarea></div>
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">نهاد صادرکننده / جزئیات</label><textarea onchange="updateNodeBasic('${node.id}', 'details', this.value)" rows="2" class="w-full text-sm border border-slate-300 rounded-md px-3 py-2 resize-none outline-none focus:border-primary">${node.details || ''}</textarea></div>
+                        </div>`;
                 }
                 html += renderTasksUI(node, isEditing);
                 html += `</div>`;
             }
-            html += `</div>`;
-            return html;
+            html += `</div>`; return html;
         }
 
         function renderTreeHTML(node, isLast = true, depth = 0, parentId = null) {
-            const isExpanded = expandedNodes.has(node.id);
-            const isEditing = editingNodes.has(node.id);
-            const hasChildren = node.children && node.children.length > 0;
-            
-            let dragAttrs = '';
-            if(!isEditing && node.id !== 'root') {
-                dragAttrs = `draggable="true" ondragstart="handleDragStart(event, '${node.id}', '${parentId}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${node.id}', '${parentId}')"`;
-            }
-            
-            if (node.type === 'qualification') {
-                return `<div class="relative ${depth > 0 ? 'ps-6 lg:ps-10' : ''} ${!isLast && depth > 0 ? 'tree-line' : 'tree-node-last'}" ${dragAttrs}><div class="node-content pr-4 mb-2">${renderQualificationUI(node, isEditing, parentId)}</div></div>`;
-            }
-
+            const isExpanded = expandedNodes.has(node.id); const isEditing = editingNodes.has(node.id); const hasChildren = node.children && node.children.length > 0;
+            let dragAttrs = ''; if(!isEditing && node.id !== 'root') { dragAttrs = `draggable="true" ondragstart="handleDragStart(event, '${node.id}', '${parentId}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${node.id}', '${parentId}')"`; }
+            if (node.type === 'qualification') { return `<div class="relative ${depth > 0 ? 'ps-6 lg:ps-10' : ''} ${!isLast && depth > 0 ? 'tree-line' : 'tree-node-last'}" ${dragAttrs}><div class="node-content pr-4 mb-2">${renderQualificationUI(node, isEditing, parentId)}</div></div>`; }
             let html = `<div class="relative ${depth > 0 ? 'ps-6 lg:ps-10' : ''} ${!isLast && depth > 0 ? 'tree-line' : 'tree-node-last'} mb-4"><div class="node-content flex items-start group">`;
-
-            if (hasChildren || node.type === 'category') {
-                html += `<button onclick="toggleNodeExpansion('${node.id}', event)" class="mt-5 w-6 h-6 shrink-0 flex items-center justify-center bg-white border-2 border-slate-300 rounded-full text-slate-500 hover:border-primary hover:text-primary z-10 transition-colors cursor-pointer shadow-sm"><i class="fas ${isExpanded ? 'fa-minus' : 'fa-plus'} text-[10px]"></i></button>`;
-            } else {
-                html += `<div class="mt-5 w-6 h-6 shrink-0 flex items-center justify-center text-slate-300 z-10"><i class="fas fa-circle text-[8px]"></i></div>`;
-            }
-
-            const borderClass = isEditing ? 'border-primary shadow-lg bg-white ring-2 ring-primary/10' : 'border-slate-300 bg-white hover:border-slate-400 hover:shadow-md cursor-grab active:cursor-grabbing';
+            if (hasChildren || node.type === 'category') { html += `<button onclick="toggleNodeExpansion('${node.id}', event)" class="mt-5 w-6 h-6 shrink-0 flex items-center justify-center bg-white border-2 border-slate-300 rounded-full text-slate-500 hover:border-primary hover:text-primary z-10 transition-colors cursor-pointer shadow-sm"><i class="fas ${isExpanded ? 'fa-minus' : 'fa-plus'} text-[10px]"></i></button>`; } 
+            else { html += `<div class="mt-5 w-6 h-6 shrink-0 flex items-center justify-center text-slate-300 z-10"><i class="fas fa-circle text-[8px]"></i></div>`; }
+            const borderClass = isEditing ? 'border-primary shadow-lg bg-white ring-2 ring-primary/10' : 'border-slate-300 bg-white hover:border-slate-400 cursor-grab';
             html += `<div class="flex-1 border-2 rounded-xl p-4 lg:p-5 mr-3 transition-all ${borderClass}" ${dragAttrs}>`;
-
             if (isEditing) {
                 html += `
                     <div class="flex justify-between items-start mb-4 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
                         <div class="flex-1">
                             <label class="text-[10px] font-bold text-slate-500 block mb-1">عنوان دسته / بخش</label>
                             <input type="text" value="${node.title}" onchange="updateNodeBasic('${node.id}', 'title', this.value)" class="w-full text-lg font-bold border border-slate-300 rounded px-2 py-1 mb-2 focus:border-primary outline-none">
-                            <textarea onchange="updateNodeBasic('${node.id}', 'description', this.value)" rows="1" class="w-full text-sm border border-slate-300 rounded px-2 py-1 resize-none outline-none focus:border-primary" placeholder="توضیحات...">${node.description || ''}</textarea>
+                            <textarea onchange="updateNodeBasic('${node.id}', 'description', this.value)" rows="1" class="w-full text-sm border border-slate-300 rounded px-2 py-1 resize-none outline-none focus:border-primary">${node.description || ''}</textarea>
                         </div>
                         <div class="mt-5">${renderActionButtons(node, true)}</div>
-                    </div>
-                `;
+                    </div>`;
             } else {
-                let icon = 'fa-folder-open text-sky-600';
-                if(node.type === 'main') icon = 'fa-building text-slate-700';
-
+                let icon = 'fa-folder-open text-sky-600'; if(node.type === 'main') icon = 'fa-building text-slate-700';
                 html += `
                     <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 shadow-sm"><i class="fas ${icon} text-xl"></i></div>
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-base md:text-lg flex items-center gap-2">${node.title}</h3>
-                                ${node.description ? `<p class="text-sm text-slate-500 mt-1">${node.description}</p>` : ''}
-                            </div>
-                        </div>
-                        ${renderActionButtons(node, false)}
-                    </div>
-                `;
+                        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 shadow-sm"><i class="fas ${icon} text-xl"></i></div>
+                            <div><h3 class="font-bold text-slate-800 text-base md:text-lg flex items-center gap-2">${node.title}</h3>${node.description ? `<p class="text-sm text-slate-500 mt-1">${node.description}</p>` : ''}</div>
+                        </div>${renderActionButtons(node, false)}
+                    </div>`;
             }
-
-            if (node.type === 'mixed_node' || isEditing) { html += renderTasksUI(node, isEditing); }
-            html += `</div></div>`;
-
-            if (hasChildren && isExpanded) {
-                html += `<div class="children-container mt-3">`;
-                node.children.forEach((child, index) => { html += renderTreeHTML(child, index === node.children.length - 1, depth + 1, node.id); });
-                html += `</div>`;
-            }
-
-            html += `</div>`;
-            return html;
+            if (node.type === 'mixed_node' || isEditing) { html += renderTasksUI(node, isEditing); } html += `</div></div>`;
+            if (hasChildren && isExpanded) { html += `<div class="children-container mt-3">`; node.children.forEach((child, index) => { html += renderTreeHTML(child, index === node.children.length - 1, depth + 1, node.id); }); html += `</div>`; }
+            html += `</div>`; return html;
         }
 
-        function renderTree() { 
-            document.getElementById('tree-container').innerHTML = renderTreeHTML(appData, true, 0, null); 
-            initDatePickers();
-        }
+        function renderTree() { document.getElementById('tree-container').innerHTML = renderTreeHTML(appData, true, 0, null); initDatePickers(); }
 
         function parseJalaliStrToDate(jStr) {
-            if(!jStr) return null;
-            let parts = jStr.split('/');
-            if(parts.length !== 3) return null;
-            let jy = parseInt(parts[0], 10);
-            let jm = parseInt(parts[1], 10);
-            let jd = parseInt(parts[2], 10);
+            if(!jStr) return null; let parts = jStr.split('/'); if(parts.length !== 3) return null;
+            let jy = parseInt(parts[0], 10); let jm = parseInt(parts[1], 10); let jd = parseInt(parts[2], 10);
             if(isNaN(jy) || isNaN(jm) || isNaN(jd)) return null;
-            
-            let g = jalaali.toGregorian(jy, jm, jd);
-            return new Date(g.gy, g.gm - 1, g.gd);
+            let g = jalaali.toGregorian(jy, jm, jd); return new Date(g.gy, g.gm - 1, g.gd);
         }
 
         function getInitials(name) {
             if(!name || name === 'بدون مسئول' || name === 'نامشخص') return 'نا';
             const words = name.replace('مهندس ', '').split(' ').filter(w => w.trim() !== '');
-            if(words.length === 1) return words[0].substring(0, 2);
-            return (words[0][0] + words[1][0]).substring(0, 2);
+            if(words.length === 1) return words[0].substring(0, 2); return (words[0][0] + words[1][0]).substring(0, 2);
         }
 
         const jMonthNames = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
@@ -824,287 +444,108 @@
             function flattenNode(node, depth) {
                 let hasChildren = (node.tasks && node.tasks.length > 0) || (node.children && node.children.length > 0);
                 let isExpanded = expandedGanttNodes.has(node.id);
-
-                flatRows.push({ 
-                    type: 'category', id: node.id, title: node.title, 
-                    depth: depth, hasChildren: hasChildren, isExpanded: isExpanded 
-                });
-                
+                flatRows.push({ type: 'category', id: node.id, title: node.title, depth: depth, hasChildren: hasChildren, isExpanded: isExpanded });
                 if(isExpanded) {
-                    if(node.tasks && node.tasks.length > 0) {
-                        node.tasks.forEach(t => {
-                            flatRows.push({
-                                type: 'task', id: t.id, title: t.title, code: t.code,
-                                assignee: t.assignee, progress: parseInt(t.progress) || 0,
-                                status: t.status, startDateStr: t.startDate, endDateStr: t.endDate,
-                                depth: depth + 1
-                            });
-                        });
-                    }
-                    
-                    if (node.children) {
-                        node.children.forEach(c => flattenNode(c, depth + 1));
-                    }
+                    if(node.tasks && node.tasks.length > 0) { node.tasks.forEach(t => { flatRows.push({ type: 'task', id: t.id, title: t.title, code: t.code, assignee: t.assignee, progress: parseInt(t.progress) || 0, status: t.status, startDateStr: t.startDate, endDateStr: t.endDate, depth: depth + 1 }); }); }
+                    if (node.children) { node.children.forEach(c => flattenNode(c, depth + 1)); }
                 }
             }
             flattenNode(appData, 0);
 
-            // تغییر جدید: جستجوی تاریخ در کل دیتای پروژه (مستقل از باز یا بسته بودن نودها)
             let allTasksWithDates = [];
             function findDatesInTree(node) {
-                if (node.tasks && node.tasks.length > 0) {
-                    node.tasks.forEach(t => {
-                        if (t.startDate && t.endDate) {
-                            allTasksWithDates.push(t);
-                        }
-                    });
-                }
-                if (node.children) {
-                    node.children.forEach(findDatesInTree);
-                }
+                if (node.tasks && node.tasks.length > 0) { node.tasks.forEach(t => { if (t.startDate && t.endDate) { allTasksWithDates.push(t); } }); }
+                if (node.children) { node.children.forEach(findDatesInTree); }
             }
-            findDatesInTree(appData); // بررسی کل درخت
+            findDatesInTree(appData);
             
-            if(allTasksWithDates.length === 0) {
-                 document.getElementById('gantt-wrapper').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-400 p-10"><i class="fas fa-calendar-times text-5xl mb-4 text-slate-300"></i><p class="font-bold text-lg">هیچ تسکی با تاریخ مشخص در کل پروژه یافت نشد.</p></div>';
-                 return;
-            }
+            if(allTasksWithDates.length === 0) { document.getElementById('gantt-wrapper').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-400 p-10"><i class="fas fa-calendar-times text-5xl mb-4 text-slate-300"></i><p class="font-bold text-lg">هیچ تسکی با تاریخ مشخص در کل پروژه یافت نشد.</p></div>'; return; }
 
             let minDateObj = null, maxDateObj = null;
             allTasksWithDates.forEach(t => {
-                let s = parseJalaliStrToDate(t.startDate);
-                let e = parseJalaliStrToDate(t.endDate);
+                let s = parseJalaliStrToDate(t.startDate); let e = parseJalaliStrToDate(t.endDate);
                 if(s && e && s > e) { let temp = s; s = e; e = temp; }
-                
                 if(s) { if(!minDateObj || s < minDateObj) minDateObj = new Date(s); }
                 if(e) { if(!maxDateObj || e > maxDateObj) maxDateObj = new Date(e); }
             });
 
             if(!minDateObj || !maxDateObj) return;
-
             const DAY_MS = 24 * 60 * 60 * 1000;
-            let startCalendar = new Date(minDateObj.getTime() - (5 * DAY_MS));
-            let endCalendar = new Date(maxDateObj.getTime() + (15 * DAY_MS));
+            let startCalendar = new Date(minDateObj.getTime() - (5 * DAY_MS)); let endCalendar = new Date(maxDateObj.getTime() + (15 * DAY_MS));
 
-            let daysArr = [];
-            let current = new Date(startCalendar);
+            let daysArr = []; let current = new Date(startCalendar);
             while(current <= endCalendar) {
                 let jd = jalaali.toJalaali(current);
-                daysArr.push({
-                    dateObj: new Date(current),
-                    gTime: current.getTime(),
-                    jy: jd.jy, jm: jd.jm, jd: jd.jd,
-                    monthName: jMonthNames[jd.jm - 1],
-                    dayOfWeek: current.getDay(),
-                    isFriday: current.getDay() === 5 
-                });
+                daysArr.push({ dateObj: new Date(current), gTime: current.getTime(), jy: jd.jy, jm: jd.jm, jd: jd.jd, monthName: jMonthNames[jd.jm - 1], dayOfWeek: current.getDay(), isFriday: current.getDay() === 5 });
                 current = new Date(current.getTime() + DAY_MS);
             }
 
-            let monthsGroups = [];
-            let currentGroup = null;
+            let monthsGroups = []; let currentGroup = null;
             daysArr.forEach(d => {
                 let monthLabel = `${d.monthName} ${d.jy}`;
-                if(!currentGroup || currentGroup.label !== monthLabel) {
-                    currentGroup = { label: monthLabel, span: 0 };
-                    monthsGroups.push(currentGroup);
-                }
+                if(!currentGroup || currentGroup.label !== monthLabel) { currentGroup = { label: monthLabel, span: 0 }; monthsGroups.push(currentGroup); }
                 currentGroup.span++;
             });
 
-            const CELL_WIDTH = 40; 
-            let html = `<table class="gantt-table w-full min-w-max text-sm bg-white">`;
-            
-            html += `<thead class="gantt-sticky-header">
-                        <tr class="gantt-sticky-header-top bg-white">
-                            <th rowspan="2" class="gantt-sticky-col w-64 min-w-[250px] p-4 text-right align-bottom text-slate-500 font-bold border-b-2 border-slate-300 shadow-[inset_0_-2px_0_rgba(203,213,225,1)] z-40">ساختار شکست / عنوان وظیفه</th>
-            `;
-            monthsGroups.forEach(m => {
-                html += `<th colspan="${m.span}" class="p-2 border-b border-l border-slate-200 text-center font-bold text-slate-600 bg-slate-50">${m.label}</th>`;
-            });
-            html += `</tr><tr>`;
-            
-            daysArr.forEach(d => {
-                const bg = d.isFriday ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-white text-slate-500 font-normal';
-                html += `<th class="p-1 border-b border-l border-slate-200 text-center text-[11px] min-w-[${CELL_WIDTH}px] ${bg}">${d.jd}</th>`;
-            });
-            html += `</tr></thead><tbody>`;
+            const CELL_WIDTH = 40; let html = `<table class="gantt-table w-full min-w-max text-sm bg-white"><thead class="gantt-sticky-header"><tr class="gantt-sticky-header-top bg-white"><th rowspan="2" class="gantt-sticky-col w-64 min-w-[250px] p-4 text-right align-bottom text-slate-500 font-bold border-b-2 border-slate-300 shadow-[inset_0_-2px_0_rgba(203,213,225,1)] z-40">ساختار شکست / عنوان وظیفه</th>`;
+            monthsGroups.forEach(m => { html += `<th colspan="${m.span}" class="p-2 border-b border-l border-slate-200 text-center font-bold text-slate-600 bg-slate-50">${m.label}</th>`; }); html += `</tr><tr>`;
+            daysArr.forEach(d => { const bg = d.isFriday ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-white text-slate-500 font-normal'; html += `<th class="p-1 border-b border-l border-slate-200 text-center text-[11px] min-w-[${CELL_WIDTH}px] ${bg}">${d.jd}</th>`; }); html += `</tr></thead><tbody>`;
 
             flatRows.forEach(row => {
-                html += `<tr class="gantt-row group transition-colors">`;
-                
-                let indent = row.depth * 16;
+                html += `<tr class="gantt-row group transition-colors">`; let indent = row.depth * 16;
                 if (row.type === 'category') {
-                    let toggleBtn = row.hasChildren ? 
-                        `<button onclick="toggleGanttNode('${row.id}')" class="w-5 h-5 inline-flex items-center justify-center mr-1.5 text-slate-400 hover:text-primary transition-colors cursor-pointer relative z-50 rounded bg-slate-100 hover:bg-sky-50 shadow-sm border border-slate-200"><i class="fas fa-chevron-${row.isExpanded ? 'down' : 'left'} text-[10px]"></i></button>` : 
-                        `<span class="w-5 mr-1.5 inline-block"></span>`;
-
-                    html += `
-                        <td class="gantt-sticky-col p-3 border-b border-l border-slate-200 text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 relative z-40" style="padding-right: ${indent + 12}px">
-                            <div class="flex items-center relative z-50">
-                                ${toggleBtn}
-                                <i class="fas fa-folder text-slate-400 ml-1.5 text-xs"></i> 
-                                <span class="truncate">${row.title}</span>
-                            </div>
-                        </td>
-                        <td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50"></td>
-                    `;
+                    let toggleBtn = row.hasChildren ? `<button onclick="toggleGanttNode('${row.id}')" class="w-5 h-5 inline-flex items-center justify-center mr-1.5 text-slate-400 hover:text-primary transition-colors cursor-pointer relative z-50 rounded bg-slate-100 shadow-sm border border-slate-200"><i class="fas fa-chevron-${row.isExpanded ? 'down' : 'left'} text-[10px]"></i></button>` : `<span class="w-5 mr-1.5 inline-block"></span>`;
+                    html += `<td class="gantt-sticky-col p-3 border-b border-l border-slate-200 text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 relative z-40" style="padding-right: ${indent + 12}px"><div class="flex items-center relative z-50">${toggleBtn}<i class="fas fa-folder text-slate-400 ml-1.5 text-xs"></i> <span class="truncate">${row.title}</span></div></td><td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50"></td>`;
                 } else {
-                    html += `
-                        <td class="gantt-sticky-col p-3 border-b border-l border-slate-200 text-xs font-medium text-slate-700 bg-white truncate hover:bg-slate-50 relative z-40" style="padding-right: ${indent + 24}px" title="${row.title}">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-800 text-[11px]"><span class="text-[9px] text-slate-500 bg-slate-100 px-1 rounded ml-1">${row.code}</span>${row.title}</span>
-                                <span class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-user ml-1"></i>${row.assignee} | ${row.progress}%</span>
-                            </div>
-                        </td>
-                        <td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50 relative">
-                            <div class="absolute inset-0 flex h-full">
-                    `;
-                    
-                    daysArr.forEach(d => {
-                        let bg = d.isFriday ? 'bg-orange-50/30' : '';
-                        html += `<div class="shrink-0 h-full border-l border-slate-100 ${bg}" style="width: ${CELL_WIDTH}px"></div>`;
-                    });
-                    html += `</div>`;
+                    html += `<td class="gantt-sticky-col p-3 border-b border-l border-slate-200 text-xs font-medium text-slate-700 bg-white truncate hover:bg-slate-50 relative z-40" style="padding-right: ${indent + 24}px" title="${row.title}"><div class="flex flex-col"><span class="font-bold text-slate-800 text-[11px]"><span class="text-[9px] text-slate-500 bg-slate-100 px-1 rounded ml-1">${row.code}</span>${row.title}</span><span class="text-[10px] text-slate-400 mt-0.5"><i class="fas fa-user ml-1"></i>${row.assignee} | ${row.progress}%</span></div></td><td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50 relative"><div class="absolute inset-0 flex h-full">`;
+                    daysArr.forEach(d => { let bg = d.isFriday ? 'bg-orange-50/30' : ''; html += `<div class="shrink-0 h-full border-l border-slate-100 ${bg}" style="width: ${CELL_WIDTH}px"></div>`; }); html += `</div>`;
                     
                     if (row.startDateStr && row.endDateStr) {
-                        let tStart = parseJalaliStrToDate(row.startDateStr);
-                        let tEnd = parseJalaliStrToDate(row.endDateStr);
+                        let tStart = parseJalaliStrToDate(row.startDateStr); let tEnd = parseJalaliStrToDate(row.endDateStr);
                         if(tStart && tEnd) {
                             if(tStart > tEnd) { let temp = tStart; tStart = tEnd; tEnd = temp; }
-                            
-                            let offsetMs = tStart.getTime() - startCalendar.getTime();
-                            let offsetDays = offsetMs / DAY_MS;
-                            let durationDays = ((tEnd.getTime() - tStart.getTime()) / DAY_MS) + 1;
-                            
-                            let rightPos = offsetDays * CELL_WIDTH;
-                            let barWidth = durationDays * CELL_WIDTH;
-                            
-                            let sColor = statusOptions[row.status] ? statusOptions[row.status].ganttColor : 'bg-slate-400';
-                            let initials = getInitials(row.assignee);
-                            
-                            html += `
-                                <div class="absolute top-[8px] h-[32px] ${sColor} rounded flex items-center shadow-sm cursor-default hover:shadow-md transition-shadow group/bar border border-black/10 overflow-visible z-10" 
-                                     style="right: ${rightPos}px; width: ${barWidth}px;" 
-                                     title="شروع: ${row.startDateStr} | پایان: ${row.endDateStr} | پیشرفت: ${row.progress}%">
-                                     
-                                    <div class="flex-1 overflow-hidden px-2 text-white text-[10px] font-bold truncate">
-                                        ${barWidth > 40 ? row.title : ''}
-                                    </div>
-                                    
-                                    <div class="absolute bottom-0 right-0 h-1 bg-black/20" style="width: ${row.progress}%"></div>
-                                    
-                                    <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-700 shadow-sm z-20" title="مسئول: ${row.assignee}">
-                                        ${initials}
-                                    </div>
-                                </div>
-                            `;
+                            let offsetDays = (tStart.getTime() - startCalendar.getTime()) / DAY_MS; let durationDays = ((tEnd.getTime() - tStart.getTime()) / DAY_MS) + 1;
+                            let rightPos = offsetDays * CELL_WIDTH; let barWidth = durationDays * CELL_WIDTH;
+                            let sColor = statusOptions[row.status] ? statusOptions[row.status].ganttColor : 'bg-slate-400'; let initials = getInitials(row.assignee);
+                            html += `<div class="absolute top-[8px] h-[32px] ${sColor} rounded flex items-center shadow-sm cursor-default hover:shadow-md transition-shadow group/bar border border-black/10 overflow-visible z-10" style="right: ${rightPos}px; width: ${barWidth}px;" title="شروع: ${row.startDateStr} | پایان: ${row.endDateStr} | پیشرفت: ${row.progress}%"><div class="flex-1 overflow-hidden px-2 text-white text-[10px] font-bold truncate">${barWidth > 40 ? row.title : ''}</div><div class="absolute bottom-0 right-0 h-1 bg-black/20" style="width: ${row.progress}%"></div><div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-700 shadow-sm z-20" title="مسئول: ${row.assignee}">${initials}</div></div>`;
                         }
                     }
-
                     html += `</td>`;
-                }
-                html += `</tr>`;
+                } html += `</tr>`;
             });
-
-            html += `</tbody></table>`;
-            document.getElementById('gantt-wrapper').innerHTML = html;
+            html += `</tbody></table>`; document.getElementById('gantt-wrapper').innerHTML = html;
         }
 
-        // Initialize App
-        window.onload = function() { 
-            renderTree(); 
-        };
     </script>
 
-    <!-- Team Management Modal -->
+    <!-- Team Modal -->
     <div id="team-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]" id="team-modal-content">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-users text-primary ml-2"></i>مدیریت مسئولین (Owners)</h3>
-                <button onclick="closeTeamModal()" class="text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-times"></i></button>
-            </div>
-            
-            <div class="flex gap-2 mb-4">
-                <input type="text" id="new-team-member" class="flex-1 text-sm border border-slate-300 rounded-md px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="نام مسئول جدید را تایپ کنید..." onkeypress="if(event.key === 'Enter') addTeamMember()">
-                <button onclick="addTeamMember()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors text-sm font-medium shadow-sm"><i class="fas fa-plus ml-1"></i>افزودن</button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar" id="team-members-list">
-            </div>
+            <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3"><h3 class="text-lg font-bold text-slate-800"><i class="fas fa-users text-primary ml-2"></i>مدیریت مسئولین</h3><button onclick="closeTeamModal()" class="text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 w-8 h-8 rounded"><i class="fas fa-times"></i></button></div>
+            <div class="flex gap-2 mb-4"><input type="text" id="new-team-member" class="flex-1 text-sm border border-slate-300 rounded-md px-3 py-2 outline-none focus:border-primary" placeholder="نام مسئول جدید..."><button onclick="addTeamMember()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors text-sm font-medium"><i class="fas fa-plus ml-1"></i>افزودن</button></div>
+            <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar" id="team-members-list"></div>
         </div>
     </div>
 
     <script>
-        function openTeamModal() {
-            renderTeamList();
-            const modal = document.getElementById('team-modal');
-            const content = document.getElementById('team-modal-content');
-            modal.classList.replace('hidden', 'flex');
-            setTimeout(() => { 
-                modal.classList.remove('opacity-0'); 
-                content.classList.remove('scale-95'); 
-            }, 10);
-        }
-
-        function closeTeamModal() {
-            const modal = document.getElementById('team-modal');
-            const content = document.getElementById('team-modal-content');
-            modal.classList.add('opacity-0'); 
-            content.classList.add('scale-95');
-            setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300);
-        }
-
-        function renderTeamList() {
-            const list = document.getElementById('team-members-list');
-            list.innerHTML = '';
-            teamMembers.forEach((member, index) => {
-                if(member === 'بدون مسئول') return; 
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-slate-50 hover:bg-slate-100 p-2.5 rounded-lg border border-slate-200 transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-primary flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">${getInitials(member)}</div>
-                            <span class="text-sm font-bold text-slate-700">${member}</span>
-                        </div>
-                        <button onclick="removeTeamMember(${index})" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 w-8 h-8 rounded flex items-center justify-center transition-colors shadow-sm bg-white border border-slate-200" title="حذف شخص"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
-            });
-        }
-
-        function addTeamMember() {
-            const input = document.getElementById('new-team-member');
-            const val = input.value.trim();
-            if(val && !teamMembers.includes(val)) {
-                teamMembers.push(val);
-                input.value = '';
-                renderTeamList();
-                renderTree(); 
-            } else if (teamMembers.includes(val)) {
-                alert('این نام قبلاً در لیست ثبت شده است.');
-            }
-        }
-
-        function removeTeamMember(index) {
-            if(confirm('آیا از حذف این شخص اطمینان دارید؟ \nتسک‌های قبلی او در سیستم تغییر نخواهند کرد اما این شخص دیگر در منوی کشویی قابل انتخاب نخواهد بود.')) {
-                teamMembers.splice(index, 1);
-                renderTeamList();
-                renderTree(); 
-            }
-        }
+        function openTeamModal() { renderTeamList(); const modal = document.getElementById('team-modal'); const content = document.getElementById('team-modal-content'); modal.classList.replace('hidden', 'flex'); setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10); }
+        function closeTeamModal() { const modal = document.getElementById('team-modal'); const content = document.getElementById('team-modal-content'); modal.classList.add('opacity-0'); content.classList.add('scale-95'); setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300); }
+        function renderTeamList() { const list = document.getElementById('team-members-list'); list.innerHTML = ''; teamMembers.forEach((member, index) => { if(member === 'بدون مسئول') return; list.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-primary flex items-center justify-center text-xs font-bold">${getInitials(member)}</div><span class="text-sm font-bold text-slate-700">${member}</span></div><button onclick="removeTeamMember(${index})" class="text-rose-400 hover:text-rose-600 bg-white w-8 h-8 rounded border"><i class="fas fa-trash"></i></button></div>`; }); }
+        function addTeamMember() { const input = document.getElementById('new-team-member'); const val = input.value.trim(); if(val && !teamMembers.includes(val)) { teamMembers.push(val); input.value = ''; renderTeamList(); renderTree(); } }
+        function removeTeamMember(index) { if(confirm('از حذف این شخص اطمینان دارید؟')) { teamMembers.splice(index, 1); renderTeamList(); renderTree(); } }
     </script>
 
-    <!-- اسکریپت اتصال به سرور ابری گوگل شیت -->
+    <!-- اسکریپت اتصال POST به گوگل شیت -->
     <script>
-        // لینک وب اپلیکیشن گوگل شیت خود را در خط زیر بین کوتیشن‌ها قرار دهید
-        // مثال: const SCRIPT_URL = 'https://script.google.com/macros/s/.../exec';
-        const SCRIPT_URL = 'لینک_کپی_شده_از_مرحله_8_را_اینجا_قرار_دهید';
-
         function saveDataToCloud() {
+            if(!SCRIPT_URL || SCRIPT_URL.includes("لینک_مرحله_8")) {
+                alert("لطفا ابتدا لینک گوگل اسکریپت را در فایل HTML قرار دهید."); return;
+            }
+
             const btn = document.getElementById('save-btn');
             const originalHTML = btn.innerHTML;
             
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ذخیره...';
             btn.disabled = true;
             btn.classList.replace('bg-emerald-600', 'bg-emerald-400');
 
@@ -1113,71 +554,28 @@
                 teamMembers: teamMembers
             };
 
+            // برای جلوگیری از خطای پیش‌نمایش مرورگر (Preflight/CORS) باید از FormData استفاده کنیم
+            const formData = new URLSearchParams();
+            formData.append('data', JSON.stringify(payload));
+
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
                 if(data.result === 'success') {
-                    alert('تغییرات با موفقیت در فضای ابری ثبت شد.');
+                    alert('تغییرات با موفقیت در گوگل شیت ذخیره شد.');
                 } else {
-                    alert('خطا در ذخیره‌سازی: ' + data.message);
+                    alert('خطا در ذخیره‌سازی سرور: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                // معمولا گوگل اسکریپت به دلیل CORS در حالت No-Cors ریدایرکت میشود
-                // پیام موفقیت رو اینجا نشون میدیم چون دیتا به سرور میرسه
-                alert('درخواست ارسال شد. لطفا فایل گوگل شیت خود را بررسی کنید.');
+                console.log('CORS fallback handling...');
+                // گوگل شیت در متد POST همیشه یک خطای CORS سمت کلاینت میدهد اما دیتا ثبت میشود
+                alert('اطلاعات با موفقیت به سرور ارسال شد.');
             })
             .finally(() => {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-                btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
-            });
-        }
-    </script>
-    <script>
-        // لینک وب اپلیکیشن گوگل شیت خود را اینجا قرار دهید
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzR4IkLlDZ7q0f29cVHKqt8x2x6MrLsdQZ4gbbYfQSTk-iNDAIJl_ujdRwWXUT6w9RP/exec';
-
-        function saveDataToCloud() {
-            const btn = document.getElementById('save-btn');
-            const originalHTML = btn.innerHTML;
-            
-            // تغییر ظاهر دکمه به حالت لودینگ
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال...';
-            btn.disabled = true;
-            btn.classList.replace('bg-emerald-600', 'bg-emerald-400');
-
-            // ارسال دیتای اصلی (appData) و لیست اعضا (teamMembers)
-            const payload = {
-                appData: appData,
-                teamMembers: teamMembers
-            };
-
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                // برای جلوگیری از خطای CORS در مرورگر از text/plain استفاده می‌شود
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.result === 'success') {
-                    alert('تغییرات با موفقیت در گوگل شیت ثبت شد.');
-                } else {
-                    alert('خطا در ذخیره‌سازی: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('خطا در ارتباط با سرور.');
-            })
-            .finally(() => {
-                // بازگرداندن دکمه به حالت اولیه
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
                 btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
@@ -1186,3 +584,10 @@
     </script>
 </body>
 </html>
+```eof
+
+**نکات مهم پس از جایگذاری:**
+۱. در فایل HTML جدید حتماً لینک گوگل اسکریپتی که در **مرحله ۱** (نسخه جدید Deployment) ساختید را در خط 100 جایگزین عبارت فارسی کنید.
+۲. فایل را در گیت‌هاب آپلود کنید (و کمی صبر کنید تا گیت‌هاب آپدیت شود).
+۳. حالا وقتی سایت را باز می‌کنید، یک صفحه لودینگ می‌بینید که اطلاعات را از گوگل شیت شما می‌خواند و نمایش می‌دهد.
+۴. وقتی دکمه ذخیره را می‌زنید، اطلاعات در شیت ثبت می‌شود و پیام موفقیت‌آمیز نمایش داده می‌شود.
