@@ -863,7 +863,7 @@
                     node.children.forEach(findDatesInTree);
                 }
             }
-            findDatesInTree(appData); 
+            findDatesInTree(appData); // بررسی کل درخت
             
             if(allTasksWithDates.length === 0) {
                  document.getElementById('gantt-wrapper').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-400 p-10"><i class="fas fa-calendar-times text-5xl mb-4 text-slate-300"></i><p class="font-bold text-lg">هیچ تسکی با تاریخ مشخص در کل پروژه یافت نشد.</p></div>';
@@ -1010,7 +1010,6 @@
             html += `</tbody></table>`;
             document.getElementById('gantt-wrapper').innerHTML = html;
         }
-
     </script>
 
     <!-- Team Management Modal -->
@@ -1159,6 +1158,7 @@
 
         // Initialize App
         window.onload = function() { 
+            // در لحظه باز شدن فایل، داده ها را از فضای ابری فراخوانی می کند
             loadDataFromCloud(); 
         };
     </script>
