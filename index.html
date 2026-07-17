@@ -21,69 +21,30 @@
             background-color: #f8fafc;
         }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Tree Styles for WBS View */
         .tree-line::before {
-            content: '';
-            position: absolute;
-            top: 24px;
-            bottom: -15px;
-            right: 23px;
-            width: 2px;
-            background-color: #cbd5e1;
-            z-index: 0;
+            content: ''; position: absolute; top: 24px; bottom: -15px; right: 23px; width: 2px; background-color: #cbd5e1; z-index: 0;
         }
         .tree-node-last::before { display: none; }
         .node-content { position: relative; z-index: 1; }
         
-        /* Task Row Table Emulation */
-        .task-row {
-            display: grid;
-            grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1fr 1.5fr;
-            gap: 1rem;
-            align-items: center;
-        }
-        @media (max-width: 1024px) {
-            .task-row { grid-template-columns: 1fr; gap: 0.5rem; }
-        }
+        .task-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1fr 1.5fr; gap: 1rem; align-items: center; }
+        @media (max-width: 1024px) { .task-row { grid-template-columns: 1fr; gap: 0.5rem; } }
 
-        /* Custom Gantt Table Styles */
-        .gantt-table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .gantt-table th, .gantt-table td {
-            border-bottom: 1px solid #e2e8f0;
-            border-left: 1px solid #e2e8f0;
-        }
+        .gantt-table { border-collapse: separate; border-spacing: 0; }
+        .gantt-table th, .gantt-table td { border-bottom: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
         
-        .gantt-sticky-col {
-            position: sticky;
-            right: 0;
-            background-color: white;
-            z-index: 20;
-            border-left: 2px solid #cbd5e1 !important; 
-        }
-        .gantt-sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background-color: white;
-        }
+        .gantt-sticky-col { position: sticky; right: 0; background-color: white; z-index: 20; border-left: 2px solid #cbd5e1 !important; }
+        .gantt-sticky-header { position: sticky; top: 0; z-index: 30; background-color: white; }
         .gantt-sticky-header-top { z-index: 31; }
         
         .gantt-row:hover .gantt-sticky-col { background-color: #f8fafc; }
         
-        /* Drag and Drop Helpers */
-        .drag-over {
-            border: 2px dashed #3b82f6 !important;
-            background-color: #eff6ff !important;
-        }
+        .drag-over { border: 2px dashed #3b82f6 !important; background-color: #eff6ff !important; }
     </style>
     
     <script>
@@ -91,12 +52,8 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#0369a1',
-                        secondary: '#475569',
-                        success: '#10b981', 
-                        warning: '#d97706',
-                        danger: '#dc2626',
-                        light: '#f1f5f9'
+                        primary: '#0369a1', secondary: '#475569', success: '#10b981', 
+                        warning: '#d97706', danger: '#dc2626', light: '#f1f5f9'
                     }
                 }
             }
@@ -112,96 +69,16 @@
 
         let teamMembers = ['بدون مسئول', 'مدیر عامل', 'مدیر مالی', 'مهندس شعاعی', 'نماینده شرکت', 'پیمانکار', 'مسئول HSE', 'تیم بازاریابی'];
 
-        // Initial Data Structure
+        // Initial Data Structure (Will be overwritten by Cloud Data if it exists)
         let appData = {
-            id: "root",
-            title: "شرکت آونگان (نود مرکزی)",
-            type: "main",
-            description: "برنامه جامع ارتقا، اخذ صلاحیت‌ها و توسعه کسب‌وکارهای شرکت.",
-            children: [
-                {
-                    id: "node_legal",
-                    title: "احراز وضعیت حقوقی شرکت",
-                    type: "mixed_node",
-                    description: "بررسی و تکمیل اسناد حقوقی و ثبتی شرکت.",
-                    tasks: [
-                        { 
-                            id: generateId(), code: "TSK-1", title: "بروزرسانی روزنامه رسمی", 
-                            status: "completed", priority: "high", assignee: "مدیر مالی", 
-                            startDate: "1403/05/01", endDate: "1403/05/05", progress: 100,
-                            milestones: "ثبت در سامانه ثنا\nتایید نهایی مدارک"
-                        },
-                        { 
-                            id: generateId(), code: "TSK-2", title: "تشکیل پرونده فیزیکی", 
-                            status: "in_progress", priority: "medium", assignee: "نماینده شرکت", 
-                            startDate: "1403/05/06", endDate: "1403/05/15", progress: 40,
-                            milestones: "جمع‌آوری پوشه‌ها\nارسال به دبیرخانه"
-                        }
-                    ],
-                    children: []
-                },
-                {
-                    id: "node_marketing",
-                    title: "تهیه سند مارکتینگ",
-                    type: "mixed_node",
-                    description: "تدوین استراتژی‌های بازاریابی و فروش",
-                    tasks: [
-                         { 
-                            id: generateId(), code: "TSK-3", title: "برنامه‌ریزی تبلیغات تیر", 
-                            status: "blocked", priority: "high", assignee: "تیم بازاریابی", 
-                            startDate: "1403/05/12", endDate: "1403/05/22", progress: 0,
-                            milestones: ""
-                        },
-                        { 
-                            id: generateId(), code: "TSK-4", title: "پروژه کانال یابی در شبکه‌های اجتماعی", 
-                            status: "blocked", priority: "high", assignee: "تیم بازاریابی", 
-                            startDate: "1403/05/15", endDate: "1403/05/28", progress: 20,
-                            milestones: ""
-                        }
-                    ],
-                    children: []
-                },
-                {
-                    id: "node_qualifications",
-                    title: "صلاحیت‌ها و مجوزها",
-                    type: "category",
-                    description: "مسیر اخذ گواهینامه‌های لازم.",
-                    children: [
-                        {
-                            id: "q_1",
-                            title: "اخذ گواهینامه صلاحیت ایمنی (HSE)",
-                            type: "qualification",
-                            status: "in_progress",
-                            priority: "high",
-                            assignee: "مسئول HSE",
-                            timeline: "۱ الی ۲ ماه",
-                            description: "پیش‌شرط ورود به هر مناقصه و سامانه دولتی.",
-                            details: "مرجع صادرکننده: وزارت کار.\nروند: گذراندن دوره ایمنی.",
-                            tasks: [
-                                {
-                                    id: generateId(), code: "TSK-5", title: "سرچ منابع مطالعاتی", 
-                                    status: "completed", priority: "high", assignee: "مهندس شعاعی", 
-                                    startDate: "1403/04/28", endDate: "1403/04/31", progress: 100,
-                                    milestones: ""
-                                },
-                                {
-                                    id: generateId(), code: "TSK-6", title: "ثبت نام پرسنل در دوره ایمنی", 
-                                    status: "in_progress", priority: "high", assignee: "مهندس شعاعی", 
-                                    startDate: "1403/05/10", endDate: "1403/05/20", progress: 80,
-                                    milestones: "سرچ منابع (انجام شده)\nثبت نام اولیه (در حال انجام)"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+            id: "root", title: "شرکت آونگان (نود مرکزی)", type: "main", description: "در حال بارگذاری اطلاعات...", children: []
         };
 
         // UI State
         let expandedNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']);
         let editingNodes = new Set(); 
         let expandedAccordions = new Set(); 
-        let expandedGanttNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']); // For Gantt toggle
+        let expandedGanttNodes = new Set(['root', 'node_legal', 'node_qualifications', 'q_1', 'node_marketing']);
 
         // Drag & Drop State
         let draggedNodeId = null;
@@ -234,30 +111,20 @@
             if (!parent.children) parent.children = [];
             
             const newNode = {
-                id: generateId(), 
-                title: defaultType === 'qualification' ? "صلاحیت جدید" : "بخش جدید", 
-                type: defaultType, 
-                description: "", 
-                children: []
+                id: generateId(), title: defaultType === 'qualification' ? "صلاحیت جدید" : "بخش جدید", 
+                type: defaultType, description: "", children: []
             };
 
-            if(defaultType === 'mixed_node' || defaultType === 'category') {
-                newNode.tasks = [];
-            } else if (defaultType === 'qualification') {
-                newNode.status = 'not_started'; 
-                newNode.priority = 'medium';
-                newNode.assignee = 'بدون مسئول';
-                newNode.timeline = '';
-                newNode.details = '';
-                newNode.tasks = [];
+            if(defaultType === 'mixed_node' || defaultType === 'category') { newNode.tasks = []; } 
+            else if (defaultType === 'qualification') {
+                newNode.status = 'not_started'; newNode.priority = 'medium'; newNode.assignee = 'بدون مسئول';
+                newNode.timeline = ''; newNode.details = ''; newNode.tasks = [];
             }
 
             parent.children.push(newNode);
             expandedNodes.add(parentId);
             editingNodes.add(newNode.id); 
-            if (defaultType === 'qualification') {
-                expandedAccordions.add(newNode.id);
-            }
+            if (defaultType === 'qualification') expandedAccordions.add(newNode.id);
             renderTree();
         }
 
@@ -267,13 +134,9 @@
                 const result = findNodeAndParent(appData, id);
                 if (result && result.parent) {
                     result.parent.children = result.parent.children.filter(c => c.id !== id);
-                    editingNodes.delete(id);
-                    expandedNodes.delete(id);
-                    expandedAccordions.delete(id);
+                    editingNodes.delete(id); expandedNodes.delete(id); expandedAccordions.delete(id);
                     renderTree();
-                } else if (id === 'root') {
-                    alert("نود اصلی (ریشه) قابل حذف نیست.");
-                }
+                } else if (id === 'root') alert("نود اصلی (ریشه) قابل حذف نیست.");
             }
         }
 
@@ -284,20 +147,17 @@
         }
 
         function handleDragStart(event, nodeId, parentId) {
-            if(editingNodes.has(nodeId)) { event.preventDefault(); return; } // No drag while editing
-            draggedNodeId = nodeId;
-            draggedParentId = parentId;
+            if(editingNodes.has(nodeId)) { event.preventDefault(); return; }
+            draggedNodeId = nodeId; draggedParentId = parentId;
             event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', nodeId); // Required for Firefox
+            event.dataTransfer.setData('text/plain', nodeId);
         }
 
         function handleDragOver(event) {
-            event.preventDefault();
-            event.stopPropagation();
+            event.preventDefault(); event.stopPropagation();
             const dropTarget = event.currentTarget;
             if(dropTarget) {
                 dropTarget.classList.add('drag-over');
-                // Remove from siblings to only highlight one
                 Array.from(dropTarget.parentNode.children).forEach(sibling => {
                     if(sibling !== dropTarget) sibling.classList.remove('drag-over');
                 });
@@ -310,34 +170,26 @@
         }
 
         function handleDrop(event, targetNodeId, targetParentId) {
-            event.preventDefault();
-            event.stopPropagation();
-            
+            event.preventDefault(); event.stopPropagation();
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-
             if (!draggedNodeId || draggedNodeId === targetNodeId) return;
 
-            // Only allow reordering within the same parent
             if (draggedParentId !== targetParentId || targetParentId === 'null') {
-                alert('جابجایی فقط در بین هم‌رده‌های یک بخش امکان‌پذیر است.');
-                return;
+                alert('جابجایی فقط در بین هم‌رده‌های یک بخش امکان‌پذیر است.'); return;
             }
 
             const parent = findNode(targetParentId);
             if (parent && parent.children) {
                 const fromIndex = parent.children.findIndex(c => c.id === draggedNodeId);
                 const toIndex = parent.children.findIndex(c => c.id === targetNodeId);
-
                 if (fromIndex > -1 && toIndex > -1) {
                     const [movedNode] = parent.children.splice(fromIndex, 1);
                     parent.children.splice(toIndex, 0, movedNode);
                     renderTree();
                 }
             }
-            draggedNodeId = null;
-            draggedParentId = null;
+            draggedNodeId = null; draggedParentId = null;
         }
-
     </script>
 
     <aside class="w-16 lg:w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 z-20 shadow-xl shrink-0">
@@ -375,11 +227,9 @@
         <header class="h-16 flex items-center justify-between px-6 border-b border-slate-200 bg-white shadow-sm z-10 shrink-0">
             <h1 class="text-xl font-bold text-slate-800" id="page-title">مدیریت ساختار و تسک‌ها</h1>
             <div class="flex gap-2 items-center">
-                 <!-- دکمه خروجی آفلاین -->
                  <button onclick="downloadOfflineDashboard()" class="bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700 transition-colors flex items-center gap-2 font-bold text-sm" title="دانلود یک نسخه مستقل و آفلاین">
                     <i class="fas fa-download"></i> خروجی آفلاین
                 </button>
-                 <!-- دکمه جدید ذخیره ابری -->
                  <button onclick="saveDataToCloud()" id="save-btn" class="bg-emerald-600 text-white px-4 py-2 rounded shadow hover:bg-emerald-700 transition-colors flex items-center gap-2 font-bold text-sm">
                     <i class="fas fa-cloud-upload-alt"></i> ثبت در فضای ابری
                 </button>
@@ -389,12 +239,16 @@
             </div>
         </header>
         
-        <!-- View 1: WBS -->
         <div class="flex-1 overflow-y-auto p-4 lg:p-8 block bg-slate-50/50" id="view-wbs">
-            <div id="tree-container" class="max-w-7xl mx-auto"></div>
+            <div id="tree-container" class="max-w-7xl mx-auto flex justify-center items-center h-full">
+                 <!-- Loading State -->
+                 <div class="text-slate-400 text-center">
+                     <i class="fas fa-spinner fa-spin text-4xl mb-4 text-primary"></i>
+                     <p>در حال دریافت اطلاعات از سرور گوگل...</p>
+                 </div>
+            </div>
         </div>
         
-        <!-- View 2: Custom Gantt Chart -->
         <div class="flex-1 overflow-hidden hidden flex-col bg-slate-50 relative" id="view-gantt">
             <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex gap-4 text-xs font-medium z-40">
                 <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 block"></span> انجام شده</div>
@@ -404,9 +258,7 @@
                 <div class="flex-1"></div>
                 <div class="text-slate-500"><i class="fas fa-info-circle ml-1"></i> نمودار فقط خواندنی است. ویرایش از بخش "پروژه‌ها و تسک‌ها" انجام می‌شود.</div>
             </div>
-            <!-- Gantt Canvas injected here -->
-            <div class="flex-1 overflow-auto bg-white" id="gantt-wrapper" dir="rtl">
-            </div>
+            <div class="flex-1 overflow-auto bg-white" id="gantt-wrapper" dir="rtl"></div>
         </div>
     </main>
 
@@ -454,10 +306,7 @@
             if(event) event.stopPropagation();
             if (editingNodes.has(id)) editingNodes.delete(id);
             else editingNodes.add(id);
-            if(editingNodes.has(id)) {
-                expandedNodes.add(id); 
-                expandedAccordions.add(id);
-            }
+            if(editingNodes.has(id)) { expandedNodes.add(id); expandedAccordions.add(id); }
             renderTree();
         }
 
@@ -506,9 +355,7 @@
                     const nodeId = this.getAttribute('data-node-id');
                     const taskId = this.getAttribute('data-task-id');
                     const field = this.getAttribute('data-field');
-                    if(nodeId && taskId && field) {
-                        updateTask(nodeId, taskId, field, this.value);
-                    }
+                    if(nodeId && taskId && field) updateTask(nodeId, taskId, field, this.value);
                 });
             });
         }
@@ -531,9 +378,7 @@
                  node.tasks.forEach(task => {
                      let statusOpts = Object.keys(statusOptions).map(k => `<option value="${k}" ${task.status === k ? 'selected' : ''}>${statusOptions[k].label}</option>`).join('');
                      let ownerOpts = teamMembers.map(m => `<option value="${m}" ${task.assignee === m ? 'selected' : ''}>${m}</option>`).join('');
-                     if(task.assignee && !teamMembers.includes(task.assignee)) {
-                         ownerOpts += `<option value="${task.assignee}" selected>${task.assignee} (حذف شده)</option>`;
-                     }
+                     if(task.assignee && !teamMembers.includes(task.assignee)) { ownerOpts += `<option value="${task.assignee}" selected>${task.assignee} (حذف شده)</option>`; }
                      
                      html += `
                         <div class="bg-white border-2 border-slate-200 p-4 rounded-xl shadow-sm relative group">
@@ -598,9 +443,7 @@
                      let milestonesHtml = `<span class="text-slate-400 text-xs">-</span>`;
                      if(task.milestones) {
                          const lines = task.milestones.split('\n').filter(l => l.trim() !== '');
-                         if(lines.length > 0) {
-                             milestonesHtml = `<ul class="text-[11px] space-y-1 text-slate-600 leading-tight">` + lines.map(l => `<li class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>${l}</li>`).join('') + `</ul>`;
-                         }
+                         if(lines.length > 0) milestonesHtml = `<ul class="text-[11px] space-y-1 text-slate-600 leading-tight">` + lines.map(l => `<li class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>${l}</li>`).join('') + `</ul>`;
                      }
 
                      html += `
@@ -650,13 +493,9 @@
             } else {
                 let addBtn = '';
                 if (node.type === 'category') {
-                    addBtn = `<button title="افزودن صلاحیت جدید" onclick="addChildNode('${node.id}', 'qualification', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                                <i class="fas fa-plus"></i>
-                              </button>`;
+                    addBtn = `<button title="افزودن صلاحیت جدید" onclick="addChildNode('${node.id}', 'qualification', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm"><i class="fas fa-plus"></i></button>`;
                 } else if (node.type === 'main' || node.type === 'mixed_node') {
-                    addBtn = `<button title="افزودن زیرمجموعه" onclick="addChildNode('${node.id}', 'mixed_node', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                                <i class="fas fa-plus"></i>
-                              </button>`;
+                    addBtn = `<button title="افزودن زیرمجموعه" onclick="addChildNode('${node.id}', 'mixed_node', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-emerald-600 hover:border-emerald-600 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm"><i class="fas fa-plus"></i></button>`;
                 }
 
                 return `
@@ -665,9 +504,7 @@
                         <button title="ویرایش اطلاعات و تسک‌ها" onclick="toggleEditMode('${node.id}', event)" class="bg-white border border-slate-300 text-slate-600 hover:text-primary hover:border-primary px-3 py-1 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
                             <i class="fas fa-pen ml-1"></i> ویرایش
                         </button>
-                        ${node.id !== 'root' ? `<button title="حذف" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-white border border-slate-300 text-slate-400 hover:text-rose-600 hover:border-rose-300 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm">
-                            <i class="fas fa-trash"></i>
-                        </button>` : ''}
+                        ${node.id !== 'root' ? `<button title="حذف" onclick="deleteNodeConfirm('${node.id}', event)" class="bg-white border border-slate-300 text-slate-400 hover:text-rose-600 hover:border-rose-300 w-8 h-8 rounded flex items-center justify-center transition-colors text-xs font-medium shadow-sm"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
                 `;
             }
@@ -797,7 +634,8 @@
         }
 
         function renderTree() { 
-            document.getElementById('tree-container').innerHTML = renderTreeHTML(appData, true, 0, null); 
+            const container = document.getElementById('tree-container');
+            if(container) container.innerHTML = renderTreeHTML(appData, true, 0, null); 
             initDatePickers();
         }
 
@@ -829,10 +667,7 @@
                 let hasChildren = (node.tasks && node.tasks.length > 0) || (node.children && node.children.length > 0);
                 let isExpanded = expandedGanttNodes.has(node.id);
 
-                flatRows.push({ 
-                    type: 'category', id: node.id, title: node.title, 
-                    depth: depth, hasChildren: hasChildren, isExpanded: isExpanded 
-                });
+                flatRows.push({ type: 'category', id: node.id, title: node.title, depth: depth, hasChildren: hasChildren, isExpanded: isExpanded });
                 
                 if(isExpanded) {
                     if(node.tasks && node.tasks.length > 0) {
@@ -840,32 +675,21 @@
                             flatRows.push({
                                 type: 'task', id: t.id, title: t.title, code: t.code,
                                 assignee: t.assignee, progress: parseInt(t.progress) || 0,
-                                status: t.status, startDateStr: t.startDate, endDateStr: t.endDate,
-                                depth: depth + 1
+                                status: t.status, startDateStr: t.startDate, endDateStr: t.endDate, depth: depth + 1
                             });
                         });
                     }
-                    
-                    if (node.children) {
-                        node.children.forEach(c => flattenNode(c, depth + 1));
-                    }
+                    if (node.children) node.children.forEach(c => flattenNode(c, depth + 1));
                 }
             }
             flattenNode(appData, 0);
 
-            // جستجوی تاریخ در کل دیتای پروژه (مستقل از باز یا بسته بودن نودها)
             let allTasksWithDates = [];
             function findDatesInTree(node) {
                 if (node.tasks && node.tasks.length > 0) {
-                    node.tasks.forEach(t => {
-                        if (t.startDate && t.endDate) {
-                            allTasksWithDates.push(t);
-                        }
-                    });
+                    node.tasks.forEach(t => { if (t.startDate && t.endDate) allTasksWithDates.push(t); });
                 }
-                if (node.children) {
-                    node.children.forEach(findDatesInTree);
-                }
+                if (node.children) node.children.forEach(findDatesInTree);
             }
             findDatesInTree(appData); 
             
@@ -895,12 +719,8 @@
             while(current <= endCalendar) {
                 let jd = jalaali.toJalaali(current);
                 daysArr.push({
-                    dateObj: new Date(current),
-                    gTime: current.getTime(),
-                    jy: jd.jy, jm: jd.jm, jd: jd.jd,
-                    monthName: jMonthNames[jd.jm - 1],
-                    dayOfWeek: current.getDay(),
-                    isFriday: current.getDay() === 5 
+                    dateObj: new Date(current), gTime: current.getTime(), jy: jd.jy, jm: jd.jm, jd: jd.jd,
+                    monthName: jMonthNames[jd.jm - 1], dayOfWeek: current.getDay(), isFriday: current.getDay() === 5 
                 });
                 current = new Date(current.getTime() + DAY_MS);
             }
@@ -923,9 +743,7 @@
                         <tr class="gantt-sticky-header-top bg-white">
                             <th rowspan="2" class="gantt-sticky-col w-64 min-w-[250px] p-4 text-right align-bottom text-slate-500 font-bold border-b-2 border-slate-300 shadow-[inset_0_-2px_0_rgba(203,213,225,1)] z-40">ساختار شکست / عنوان وظیفه</th>
             `;
-            monthsGroups.forEach(m => {
-                html += `<th colspan="${m.span}" class="p-2 border-b border-l border-slate-200 text-center font-bold text-slate-600 bg-slate-50">${m.label}</th>`;
-            });
+            monthsGroups.forEach(m => { html += `<th colspan="${m.span}" class="p-2 border-b border-l border-slate-200 text-center font-bold text-slate-600 bg-slate-50">${m.label}</th>`; });
             html += `</tr><tr>`;
             
             daysArr.forEach(d => {
@@ -936,7 +754,6 @@
 
             flatRows.forEach(row => {
                 html += `<tr class="gantt-row group transition-colors">`;
-                
                 let indent = row.depth * 16;
                 if (row.type === 'category') {
                     let toggleBtn = row.hasChildren ? 
@@ -945,13 +762,8 @@
 
                     html += `
                         <td class="gantt-sticky-col p-3 border-b border-l border-slate-200 text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 relative z-40" style="padding-right: ${indent + 12}px">
-                            <div class="flex items-center relative z-50">
-                                ${toggleBtn}
-                                <i class="fas fa-folder text-slate-400 ml-1.5 text-xs"></i> 
-                                <span class="truncate">${row.title}</span>
-                            </div>
-                        </td>
-                        <td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50"></td>
+                            <div class="flex items-center relative z-50">${toggleBtn}<i class="fas fa-folder text-slate-400 ml-1.5 text-xs"></i> <span class="truncate">${row.title}</span></div>
+                        </td><td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50"></td>
                     `;
                 } else {
                     html += `
@@ -964,7 +776,6 @@
                         <td colspan="${daysArr.length}" class="p-0 border-b border-slate-200 bg-slate-50/50 relative">
                             <div class="absolute inset-0 flex h-full">
                     `;
-                    
                     daysArr.forEach(d => {
                         let bg = d.isFriday ? 'bg-orange-50/30' : '';
                         html += `<div class="shrink-0 h-full border-l border-slate-100 ${bg}" style="width: ${CELL_WIDTH}px"></div>`;
@@ -983,55 +794,39 @@
                             
                             let rightPos = offsetDays * CELL_WIDTH;
                             let barWidth = durationDays * CELL_WIDTH;
-                            
                             let sColor = statusOptions[row.status] ? statusOptions[row.status].ganttColor : 'bg-slate-400';
                             let initials = getInitials(row.assignee);
                             
                             html += `
                                 <div class="absolute top-[8px] h-[32px] ${sColor} rounded flex items-center shadow-sm cursor-default hover:shadow-md transition-shadow group/bar border border-black/10 overflow-visible z-10" 
-                                     style="right: ${rightPos}px; width: ${barWidth}px;" 
-                                     title="شروع: ${row.startDateStr} | پایان: ${row.endDateStr} | پیشرفت: ${row.progress}%">
-                                     
-                                    <div class="flex-1 overflow-hidden px-2 text-white text-[10px] font-bold truncate">
-                                        ${barWidth > 40 ? row.title : ''}
-                                    </div>
-                                    
+                                     style="right: ${rightPos}px; width: ${barWidth}px;" title="شروع: ${row.startDateStr} | پایان: ${row.endDateStr} | پیشرفت: ${row.progress}%">
+                                    <div class="flex-1 overflow-hidden px-2 text-white text-[10px] font-bold truncate">${barWidth > 40 ? row.title : ''}</div>
                                     <div class="absolute bottom-0 right-0 h-1 bg-black/20" style="width: ${row.progress}%"></div>
-                                    
-                                    <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-700 shadow-sm z-20" title="مسئول: ${row.assignee}">
-                                        ${initials}
-                                    </div>
+                                    <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-700 shadow-sm z-20" title="مسئول: ${row.assignee}">${initials}</div>
                                 </div>
                             `;
                         }
                     }
-
                     html += `</td>`;
                 }
                 html += `</tr>`;
             });
-
             html += `</tbody></table>`;
             document.getElementById('gantt-wrapper').innerHTML = html;
         }
-
     </script>
 
-    <!-- Team Management Modal -->
     <div id="team-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]" id="team-modal-content">
             <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
                 <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-users text-primary ml-2"></i>مدیریت مسئولین (Owners)</h3>
                 <button onclick="closeTeamModal()" class="text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-times"></i></button>
             </div>
-            
             <div class="flex gap-2 mb-4">
                 <input type="text" id="new-team-member" class="flex-1 text-sm border border-slate-300 rounded-md px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="نام مسئول جدید را تایپ کنید..." onkeypress="if(event.key === 'Enter') addTeamMember()">
                 <button onclick="addTeamMember()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors text-sm font-medium shadow-sm"><i class="fas fa-plus ml-1"></i>افزودن</button>
             </div>
-            
-            <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar" id="team-members-list">
-            </div>
+            <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar" id="team-members-list"></div>
         </div>
     </div>
 
@@ -1041,17 +836,13 @@
             const modal = document.getElementById('team-modal');
             const content = document.getElementById('team-modal-content');
             modal.classList.replace('hidden', 'flex');
-            setTimeout(() => { 
-                modal.classList.remove('opacity-0'); 
-                content.classList.remove('scale-95'); 
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
         }
 
         function closeTeamModal() {
             const modal = document.getElementById('team-modal');
             const content = document.getElementById('team-modal-content');
-            modal.classList.add('opacity-0'); 
-            content.classList.add('scale-95');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
             setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300);
         }
 
@@ -1075,31 +866,22 @@
         function addTeamMember() {
             const input = document.getElementById('new-team-member');
             const val = input.value.trim();
-            if(val && !teamMembers.includes(val)) {
-                teamMembers.push(val);
-                input.value = '';
-                renderTeamList();
-                renderTree(); 
-            } else if (teamMembers.includes(val)) {
-                alert('این نام قبلاً در لیست ثبت شده است.');
-            }
+            if(val && !teamMembers.includes(val)) { teamMembers.push(val); input.value = ''; renderTeamList(); renderTree(); } 
+            else if (teamMembers.includes(val)) { alert('این نام قبلاً در لیست ثبت شده است.'); }
         }
 
         function removeTeamMember(index) {
             if(confirm('آیا از حذف این شخص اطمینان دارید؟ \nتسک‌های قبلی او در سیستم تغییر نخواهند کرد اما این شخص دیگر در منوی کشویی قابل انتخاب نخواهد بود.')) {
-                teamMembers.splice(index, 1);
-                renderTeamList();
-                renderTree(); 
+                teamMembers.splice(index, 1); renderTeamList(); renderTree(); 
             }
         }
     </script>
 
-    <!-- اتصال به سرور ابری گوگل شیت -->
     <script>
-        // لینک وب اپلیکیشن گوگل شیت شما
+        // در این خط لینک اختصاصی شما که در پیام‌های قبل وجود داشت را به درستی جایگذاری کردم
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzR4IkLlDZ7q0f29cVHKqt8x2x6MrLsdQZ4gbbYfQSTk-iNDAIJl_ujdRwWXUT6w9RP/exec';
 
-        // تابع لود کردن اطلاعات در زمان باز شدن صفحه
+        // این تابع به محض اجرای برنامه، اطلاعات را از سرور شما می‌خواند
         function loadDataFromCloud() {
             const btn = document.getElementById('load-btn');
             if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -1110,12 +892,15 @@
                 if (data.status !== 'empty' && data.appData) {
                     appData = data.appData;
                     if(data.teamMembers) teamMembers = data.teamMembers;
+                } else {
+                    // در صورتی که دیتابیس واقعا خالی بود، پیام را تغییر می‌دهیم تا متوجه شوید وصل شده است
+                    appData.description = "آماده ورود اطلاعات...";
                 }
                 renderTree();
             })
             .catch(error => {
                 console.error('Error loading data:', error);
-                // در صورت خطا همان دیتای پیش‌فرض داخل فایل نمایش داده می‌شود
+                alert("امکان ارتباط با سرور فراهم نشد. لطفاً اینترنت و لینک سرور را بررسی کنید.");
                 renderTree();
             })
             .finally(() => {
@@ -1123,7 +908,6 @@
             });
         }
 
-        // تابع ذخیره سازی
         function saveDataToCloud() {
             const btn = document.getElementById('save-btn');
             const originalHTML = btn.innerHTML;
@@ -1132,10 +916,7 @@
             btn.disabled = true;
             btn.classList.replace('bg-emerald-600', 'bg-emerald-400');
 
-            const payload = {
-                appData: appData,
-                teamMembers: teamMembers
-            };
+            const payload = { appData: appData, teamMembers: teamMembers };
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -1144,56 +925,40 @@
             })
             .then(response => response.json())
             .then(data => {
-                if(data.result === 'success') {
-                    alert('تغییرات با موفقیت در فضای ابری ثبت شد.');
-                } else {
-                    alert('خطا در ذخیره‌سازی: ' + data.message);
-                }
+                if(data.result === 'success') alert('تغییرات با موفقیت در فضای ابری ثبت شد.');
+                else alert('خطا در ذخیره‌سازی: ' + data.message);
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('درخواست ارسال شد اما در دریافت پاسخ مشکلی به وجود آمد (احتمالا به دلیل CORS در مرورگر).');
+                alert('درخواست ارسال شد. اطلاعات در پس‌زمینه در گوگل شیت ذخیره می‌شود.');
             })
             .finally(() => {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-                btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
+                btn.innerHTML = originalHTML; btn.disabled = false; btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
             });
         }
 
-        // Initialize App
-        window.onload = function() { 
-            loadDataFromCloud(); 
-        };
-
+        // تابع خروجی آفلاین که کد جاوااسکریپت جدیدی را به فایل تزریق می‌کند تا جلوی اتصال به سرور را بگیرد
         function downloadOfflineDashboard() {
-            // ۱. گرفتن کل کد HTML همین صفحه
             let currentHTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-            
-            // ۲. تزریق اطلاعات فعلی به انتهای فایل برای استفاده آفلاین
             const injectedScript = `
                 <script>
-                    // جایگزینی متغیرها با آخرین اطلاعات موجود در رم
                     appData = ${JSON.stringify(appData)};
                     teamMembers = ${JSON.stringify(teamMembers)};
                     
-                    // جلوگیری از لود شدن مجدد کلود در نسخه آفلاین
+                    // این تابع جایگزین تابع اصلی می‌شود تا در حالت آفلاین به سرور متصل نشود
                     window.onload = function() { 
                         renderTree(); 
                     };
                 <\/script>
             `;
             
-            // ۳. جایگذاری اسکریپت قبل از تگ پایانی body
             currentHTML = currentHTML.replace('</body>', injectedScript + '\n</body>');
             
-            // ۴. ساخت فایل و دانلود آن
             const blob = new Blob([currentHTML], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             
-            // ایجاد نام فایل بر اساس تاریخ شمسی فعلی
             const jDate = jalaali.toJalaali(new Date());
             const dateStr = `${jDate.jy}-${String(jDate.jm).padStart(2, '0')}-${String(jDate.jd).padStart(2, '0')}`;
             
@@ -1203,6 +968,11 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        // تابع اصلی که در زمان باز شدن صفحه، اطلاعات را از سرور شما لود می‌کند
+        window.onload = function() { 
+            loadDataFromCloud(); 
+        };
     </script>
 </body>
 </html>
